@@ -87,7 +87,7 @@ public class ConcurrentAggregatorTest {
         assertEquals(6, metrics.size());
 
         String[] suffixes = new String[] {".max", ".min", ".p99", ".p95", ".p90", ".p50"};
-        double[] values = new double[] {99, 1, 99, 94, 90, 49};
+        double[] values = new double[] {49, 1, 48, 47, 45, 24};
         for(int i = 0; i < suffixes.length; i++) {
             assertEquals(metricName + suffixes[i], metrics.get(i).getName());
             assertEquals("gauge", metrics.get(i).getType());
