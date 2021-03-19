@@ -1,7 +1,7 @@
 name: Maven tests
 on: [push]
 jobs:
-  test-linux:
+  linux:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,11 +19,7 @@ jobs:
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots verify
       - run: mkdir artifacts && cp target/*.jar artifacts
-      - uses: actions/upload-artifact@v2
-        with:
-          name: Package
-          path: artifacts
-  test-windows:
+  windows:
     runs-on: windows-latest
 
     steps:
@@ -40,8 +36,3 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots verify
-      - run: mkdir artifacts && cp target/*.jar artifacts
-      - uses: actions/upload-artifact@v2
-        with:
-          name: Package
-          path: artifacts
