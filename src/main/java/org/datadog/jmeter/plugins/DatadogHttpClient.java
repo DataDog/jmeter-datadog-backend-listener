@@ -1,11 +1,9 @@
-package org.datadog.jmeter.plugins.datadog;
+package org.datadog.jmeter.plugins;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -13,11 +11,13 @@ import java.util.List;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
-import net.minidev.json.parser.ParseException;
-import net.sf.saxon.serialize.JSONSerializer;
+import org.datadog.jmeter.plugins.metrics.DatadogMetric;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The type Datadog http client.
+ */
 public class DatadogHttpClient {
     private String apiKey;
     private static final Logger logger = LoggerFactory.getLogger(DatadogHttpClient.class);
@@ -26,12 +26,25 @@ public class DatadogHttpClient {
     private String apiUrl = null;
     private String logIntakeUrl = null;
     private static final int timeoutMS = 60 * 1000;
+
+    /**
+     * Instantiates a new Datadog http client.
+     *
+     * @param apiKey the api key
+     * @param apiUrl the api url
+     * @param logIntakeUrl the log intake url
+     */
     public DatadogHttpClient(String apiKey, String apiUrl, String logIntakeUrl) {
         this.apiKey = apiKey;
         this.apiUrl = apiUrl;
         this.logIntakeUrl = logIntakeUrl;
     }
 
+    /**
+     * Validate connection boolean.
+     *
+     * @return the boolean
+     */
     public boolean validateConnection() {
         String urlParameters = "?api_key=" + this.apiKey;
         HttpURLConnection conn = null;
@@ -63,7 +76,12 @@ public class DatadogHttpClient {
         }
     }
 
-    public boolean submitMetrics(List<DatadogMetric> datadogMetrics) {
+    /**
+     * Submit metrics boolean.
+     *
+     * @param datadogMetrics the datadog metrics
+     */
+    public void submitMetrics(List<DatadogMetric> datadogMetrics) {
 
         // Place metric as item of series list
         JSONArray series = new JSONArray();
@@ -119,18 +137,20 @@ public class DatadogHttpClient {
             if ("ok".equals(json.getAsString("status"))) {
                 logger.info(String.format("'%s' metrics were sent to Datadog", datadogMetrics.size()));
                 logger.debug(String.format("Payload: %s", payload));
-                return true;
             } else {
                 logger.error(String.format("Unable to send '%s' metrics to Datadog!", datadogMetrics.size()));
                 logger.debug(String.format("Payload: %s", payload));
-                return false;
             }
         } catch (Exception e) {
             e.printStackTrace();
-            return false;
         }
     }
 
+    /**
+     * Submit logs.
+     *
+     * @param payload the payload
+     */
     public void submitLogs(List<JSONObject> payload) {
         JSONArray logsArray = new JSONArray();
         logsArray.addAll(payload);
@@ -147,13 +167,12 @@ public class DatadogHttpClient {
             conn.setDoInput(true);
             conn.setDoOutput(true);
 
-            OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream(), "utf-8");
-            logger.debug("Writing to OutputStreamWriter...");
+            OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream(), StandardCharsets.UTF_8);
             wr.write(logsArray.toString());
             wr.close();
 
             // Get response
-            BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
+            BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
             StringBuilder result = new StringBuilder();
             String line;
             while ((line = rd.readLine()) != null) {
