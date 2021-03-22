@@ -1,8 +1,11 @@
+/* Unless explicitly stated otherwise all files in this repository are licensed under the Apache License 2.0.
+ * This product includes software developed at Datadog (https://www.datadoghq.com/).
+ * Copyright 2021-present Datadog, Inc.
+ */
+
 package org.datadog.jmeter.plugins.metrics;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
