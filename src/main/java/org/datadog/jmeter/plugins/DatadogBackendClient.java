@@ -12,6 +12,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import net.minidev.json.JSONObject;
 import org.apache.jmeter.config.Arguments;
@@ -98,6 +101,12 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
      */
     private boolean includeSubResults = DEFAULT_INCLUDE_SUB_RESULTS;
 
+    /**
+     * User configurable. This options configures which samplers to include in monitoring results using a regex
+     * that matches on the sampler name.
+     */
+    private Pattern samplersRegex = null;
+
     /* The names of configuration options that are shown in JMeter UI */
     private static final String API_URL_PARAM = "datadogUrl";
     private static final String LOG_INTAKE_URL_PARAM = "logIntakeUrl";
@@ -106,6 +115,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     private static final String LOGS_BATCH_SIZE = "logsBatchSize";
     private static final String SEND_RESULTS_AS_LOGS = "sendResultsAsLogs";
     private static final String INCLUDE_SUB_RESULTS = "includeSubresults";
+    private static final String SAMPLERS_REGEX = "samplersRegex";
 
     /* The default values for all configuration options */
     private static final String DEFAULT_API_URL = "https://api.datadoghq.com/api/";
@@ -137,6 +147,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         arguments.addArgument(LOGS_BATCH_SIZE, String.valueOf(DEFAULT_LOGS_BATCH_SIZE));
         arguments.addArgument(SEND_RESULTS_AS_LOGS, String.valueOf(DEFAULT_SEND_RESULTS_AS_LOGS));
         arguments.addArgument(INCLUDE_SUB_RESULTS, String.valueOf(DEFAULT_INCLUDE_SUB_RESULTS));
+        arguments.addArgument(SAMPLERS_REGEX, null);
 
         return arguments;
     }
@@ -154,6 +165,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         String metricsBatchSize = context.getParameter(METRICS_BATCH_SIZE, String.valueOf(DEFAULT_METRICS_BATCH_SIZE));
         String logsBatchSize = context.getParameter(LOGS_BATCH_SIZE, String.valueOf(DEFAULT_LOGS_BATCH_SIZE));
         String sendResultsAsLogs = context.getParameter(SEND_RESULTS_AS_LOGS, String.valueOf(DEFAULT_SEND_RESULTS_AS_LOGS));
+        String samplersRegex = context.getParameter(SAMPLERS_REGEX);
 
         if (apiKey == null) {
             throw new Exception("apiKey needs to be configured.");
@@ -163,6 +175,10 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         boolean valid = datadogClient.validateConnection();
         if(!valid) {
             throw new Exception("Invalid apiKey");
+        }
+
+        if(samplersRegex != null) {
+            this.samplersRegex = Pattern.compile(samplersRegex);
         }
 
         try {
@@ -220,6 +236,10 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     @Override
     public void handleSampleResults(List<SampleResult> list, BackendListenerContext backendListenerContext) {
         for (SampleResult sampleResult : list) {
+            Matcher matcher = samplersRegex.matcher(sampleResult.getSampleLabel());
+            if(!matcher.find()) {
+                continue;
+            }
             if(this.includeSubResults) {
                 for (SampleResult subResult : sampleResult.getSubResults()) {
                     this.extractData(subResult);
