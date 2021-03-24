@@ -181,6 +181,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
             throw new Exception("Invalid 'sendResultsAsLogs'. Value '" + sendResultsAsLogs + "' is not a boolean.");
         }
         this.sendResultsAsLogs = Boolean.parseBoolean(sendResultsAsLogs);
+        this.includeSubResults = context.getBooleanParameter(INCLUDE_SUB_RESULTS, DEFAULT_INCLUDE_SUB_RESULTS);
 
         scheduler = Executors.newScheduledThreadPool(1);
         this.timerHandle = scheduler.scheduleAtFixedRate(this, METRICS_SEND_INTERVAL, METRICS_SEND_INTERVAL, TimeUnit.SECONDS);
