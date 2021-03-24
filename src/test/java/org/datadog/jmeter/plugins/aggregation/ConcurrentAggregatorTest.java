@@ -3,7 +3,7 @@
  * Copyright 2021-present Datadog, Inc.
  */
 
-package org.datadog.jmeter.plugins;
+package org.datadog.jmeter.plugins.aggregation;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -89,13 +89,17 @@ public class ConcurrentAggregatorTest {
         service.awaitTermination(2, TimeUnit.SECONDS);
 
         List<DatadogMetric> metrics = aggregator.flushMetrics();
-        assertEquals(6, metrics.size());
+        assertEquals(7, metrics.size());
 
-        String[] suffixes = new String[] {".max", ".min", ".p99", ".p95", ".p90", ".p50"};
-        double[] values = new double[] {49, 1, 48, 47, 45, 24};
+        String[] suffixes = new String[] {".max", ".min", ".p99", ".p95", ".p90", ".avg", ".count"};
+        double[] values = new double[] {49, 1, 48, 47, 45, 25, N_THREADS};
         for(int i = 0; i < suffixes.length; i++) {
             assertEquals(metricName + suffixes[i], metrics.get(i).getName());
-            assertEquals("gauge", metrics.get(i).getType());
+            if(suffixes[i].equals(".count")){
+                assertEquals("count", metrics.get(i).getType());
+            } else {
+                assertEquals("gauge", metrics.get(i).getType());
+            }
             assertEquals(suffixes[i], values[i], (int)metrics.get(i).getValue(), 1e-10);
         }
     }
