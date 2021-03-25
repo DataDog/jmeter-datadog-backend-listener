@@ -21,6 +21,7 @@ import org.apache.jmeter.util.JMeterUtils;
 import org.apache.jmeter.visualizers.backend.AbstractBackendListenerClient;
 import org.apache.jmeter.visualizers.backend.BackendListenerContext;
 import org.apache.jmeter.visualizers.backend.UserMetric;
+import org.datadog.jmeter.plugins.aggregation.ConcurrentAggregator;
 import org.datadog.jmeter.plugins.metrics.DatadogMetric;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

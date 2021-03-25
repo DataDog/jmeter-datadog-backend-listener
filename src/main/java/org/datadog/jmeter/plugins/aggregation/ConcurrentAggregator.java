@@ -3,10 +3,10 @@
  * Copyright 2021-present Datadog, Inc.
  */
 
-package org.datadog.jmeter.plugins;
+package org.datadog.jmeter.plugins.aggregation;
 
-import com.datadoghq.sketch.ddsketch.DDSketch;
-import com.datadoghq.sketch.ddsketch.DDSketches;
+import com.datadoghq.sketch.ddsketch.mapping.CubicallyInterpolatedMapping;
+import com.datadoghq.sketch.ddsketch.store.UnboundedSizeDenseStore;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -21,7 +21,7 @@ public class ConcurrentAggregator {
     private static final double RELATIVE_ACCURACY = 0.01;
     private Map<DatadogMetricContext, Long> counters = new HashMap<>();
     private Map<DatadogMetricContext, Double> gauges = new HashMap<>();
-    private Map<DatadogMetricContext, DDSketch> histograms = new HashMap<>();
+    private Map<DatadogMetricContext, DatadogSketch> histograms = new HashMap<>();
     private Lock lock = new ReentrantLock();
     Semaphore testOnlyBlocker;
 
@@ -55,9 +55,9 @@ public class ConcurrentAggregator {
     }
     public void histogram(DatadogMetricContext context, double value) {
         lock.lock();
-        DDSketch sketch = histograms.get(context);
+        DatadogSketch sketch = histograms.get(context);
         if (sketch == null) {
-            sketch = DDSketches.unboundedDense(RELATIVE_ACCURACY);
+            sketch = new DatadogSketch(new CubicallyInterpolatedMapping(RELATIVE_ACCURACY), UnboundedSizeDenseStore::new);
             histograms.put(context, sketch);
         }
         if(testOnlyBlocker != null) {
@@ -72,7 +72,7 @@ public class ConcurrentAggregator {
         lock.lock();
         Map<DatadogMetricContext, Long> countersPtr = counters;
         Map<DatadogMetricContext, Double> gaugesPtr = gauges;
-        Map<DatadogMetricContext, DDSketch> histrogramsPtr = histograms;
+        Map<DatadogMetricContext, DatadogSketch> histrogramsPtr = histograms;
 
         counters = new HashMap<>();
         gauges = new HashMap<>();
@@ -89,13 +89,14 @@ public class ConcurrentAggregator {
             metrics.add(new DatadogMetric(context.getName(), "gauge", counterValue, context.getTags()));
         }
         for(DatadogMetricContext context : histrogramsPtr.keySet()) {
-            DDSketch sketch = histrogramsPtr.get(context);
+            DatadogSketch sketch = histrogramsPtr.get(context);
             metrics.add(new DatadogMetric(context.getName() + ".max", "gauge", sketch.getMaxValue(), context.getTags()));
             metrics.add(new DatadogMetric(context.getName() + ".min", "gauge", sketch.getMinValue(), context.getTags()));
             metrics.add(new DatadogMetric(context.getName() + ".p99", "gauge", sketch.getValueAtQuantile(0.99), context.getTags()));
             metrics.add(new DatadogMetric(context.getName() + ".p95", "gauge", sketch.getValueAtQuantile(0.95), context.getTags()));
             metrics.add(new DatadogMetric(context.getName() + ".p90", "gauge", sketch.getValueAtQuantile(0.90), context.getTags()));
-            metrics.add(new DatadogMetric(context.getName() + ".p50", "gauge", sketch.getValueAtQuantile(0.50), context.getTags()));
+            metrics.add(new DatadogMetric(context.getName() + ".avg", "gauge", sketch.getAverageValue(), context.getTags()));
+            metrics.add(new DatadogMetric(context.getName() + ".count", "count", sketch.getCountValue(), context.getTags()));
         }
 
         return metrics;
