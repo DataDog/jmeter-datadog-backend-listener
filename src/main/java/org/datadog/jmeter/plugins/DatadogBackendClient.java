@@ -23,6 +23,7 @@ import org.apache.jmeter.util.JMeterUtils;
 import org.apache.jmeter.visualizers.backend.AbstractBackendListenerClient;
 import org.apache.jmeter.visualizers.backend.BackendListenerContext;
 import org.apache.jmeter.visualizers.backend.UserMetric;
+import org.datadog.jmeter.plugins.aggregation.ConcurrentAggregator;
 import org.datadog.jmeter.plugins.metrics.DatadogMetric;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -186,7 +187,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         try {
             this.logsBatchSize = Integer.parseUnsignedInt(logsBatchSize);
         } catch (NumberFormatException e) {
-            throw new Exception("Invalid 'metricsBatchSize'. Value '" + metricsBatchSize + "' is not an integer.");
+            throw new Exception("Invalid 'logsBatchSize'. Value '" + logsBatchSize + "' is not an integer.");
         }
 
         if(!sendResultsAsLogs.toLowerCase().equals("false") && !sendResultsAsLogs.toLowerCase().equals("true")) {
@@ -194,6 +195,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         }
         this.sendResultsAsLogs = Boolean.parseBoolean(sendResultsAsLogs);
         this.samplersRegex = Pattern.compile(samplersRegex);
+        this.includeSubResults = context.getBooleanParameter(INCLUDE_SUB_RESULTS, DEFAULT_INCLUDE_SUB_RESULTS);
 
         scheduler = Executors.newScheduledThreadPool(1);
         this.timerHandle = scheduler.scheduleAtFixedRate(this, METRICS_SEND_INTERVAL, METRICS_SEND_INTERVAL, TimeUnit.SECONDS);
