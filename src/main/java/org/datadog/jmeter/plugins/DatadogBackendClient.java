@@ -14,7 +14,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import net.minidev.json.JSONObject;
 import org.apache.jmeter.config.Arguments;
@@ -124,6 +123,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     private static final int DEFAULT_LOGS_BATCH_SIZE = 500;
     private static final boolean DEFAULT_SEND_RESULTS_AS_LOGS = true;
     private static final boolean DEFAULT_INCLUDE_SUB_RESULTS = false;
+    private static final String DEFAULT_SAMPLERS_REGEX = "";
 
     /**
      * Calls at a fixed schedule and sends metrics to Datadog.
@@ -147,7 +147,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         arguments.addArgument(LOGS_BATCH_SIZE, String.valueOf(DEFAULT_LOGS_BATCH_SIZE));
         arguments.addArgument(SEND_RESULTS_AS_LOGS, String.valueOf(DEFAULT_SEND_RESULTS_AS_LOGS));
         arguments.addArgument(INCLUDE_SUB_RESULTS, String.valueOf(DEFAULT_INCLUDE_SUB_RESULTS));
-        arguments.addArgument(SAMPLERS_REGEX, null);
+        arguments.addArgument(SAMPLERS_REGEX, DEFAULT_SAMPLERS_REGEX);
 
         return arguments;
     }
@@ -165,7 +165,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         String metricsBatchSize = context.getParameter(METRICS_BATCH_SIZE, String.valueOf(DEFAULT_METRICS_BATCH_SIZE));
         String logsBatchSize = context.getParameter(LOGS_BATCH_SIZE, String.valueOf(DEFAULT_LOGS_BATCH_SIZE));
         String sendResultsAsLogs = context.getParameter(SEND_RESULTS_AS_LOGS, String.valueOf(DEFAULT_SEND_RESULTS_AS_LOGS));
-        String samplersRegex = context.getParameter(SAMPLERS_REGEX);
+        String samplersRegex = context.getParameter(SAMPLERS_REGEX, DEFAULT_SAMPLERS_REGEX);
 
         if (apiKey == null) {
             throw new Exception("apiKey needs to be configured.");
@@ -175,10 +175,6 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         boolean valid = datadogClient.validateConnection();
         if(!valid) {
             throw new Exception("Invalid apiKey");
-        }
-
-        if(samplersRegex != null) {
-            this.samplersRegex = Pattern.compile(samplersRegex);
         }
 
         try {
@@ -197,9 +193,11 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
             throw new Exception("Invalid 'sendResultsAsLogs'. Value '" + sendResultsAsLogs + "' is not a boolean.");
         }
         this.sendResultsAsLogs = Boolean.parseBoolean(sendResultsAsLogs);
+        this.samplersRegex = Pattern.compile(samplersRegex);
 
         scheduler = Executors.newScheduledThreadPool(1);
         this.timerHandle = scheduler.scheduleAtFixedRate(this, METRICS_SEND_INTERVAL, METRICS_SEND_INTERVAL, TimeUnit.SECONDS);
+        super.setupTest(context);
     }
 
     /**
