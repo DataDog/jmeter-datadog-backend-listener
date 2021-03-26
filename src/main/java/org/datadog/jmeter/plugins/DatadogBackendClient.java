@@ -175,7 +175,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         try {
             this.logsBatchSize = Integer.parseUnsignedInt(logsBatchSize);
         } catch (NumberFormatException e) {
-            throw new Exception("Invalid 'metricsBatchSize'. Value '" + metricsBatchSize + "' is not an integer.");
+            throw new Exception("Invalid 'logsBatchSize'. Value '" + logsBatchSize + "' is not an integer.");
         }
 
         if(!sendResultsAsLogs.toLowerCase().equals("false") && !sendResultsAsLogs.toLowerCase().equals("true")) {
