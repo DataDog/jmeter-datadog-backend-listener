@@ -3,3 +3,4 @@ import,com.datadoghq.sketches-java,Apache-2.0,Copyright 2020 Datadog," Inc."
 import,org.apache.jmeter,Apache-2.0,Copyright 1998-2021 The Apache Software Foundation,
 import (test),org.junit,EPL-1.0,,
 import (test),org.mockito,MIT,Copyright (c) 2007 Mockito contributors,
+import (test),org.powermock,Apache-2.0,Copyright 2007-2017 PowerMock Contributors
