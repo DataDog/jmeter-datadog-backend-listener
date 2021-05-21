@@ -111,7 +111,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     public void setupTest(BackendListenerContext context) throws Exception {
         this.configuration = DatadogConfiguration.parseConfiguration(context);
 
-        datadogClient = new DatadogHttpClient(configuration.getApiKey(), configuration.getApiUrl(), configuration.getLogIntakeUrl());
+        datadogClient = new DatadogHttpClient(configuration.getApiKey(), configuration.getApiUrl(), configuration.getLogIntakeUrl(),configuration.getInputTags());
         boolean valid = datadogClient.validateConnection();
         if(!valid) {
             throw new DatadogApiException("Invalid apiKey");

@@ -50,6 +50,7 @@ public class DatadogBackendClientTest
             put("sendResultsAsLogs", "true");
             put("includeSubresults", "false");
             put("samplersRegex", "^foo\\d*$");
+            put("inputTags","key:value");
         }
     };
     private ConcurrentAggregator aggregator = new ConcurrentAggregator();
@@ -93,7 +94,7 @@ public class DatadogBackendClientTest
         SampleResult result = createDummySampleResult("foo");
         this.client.handleSampleResults(Collections.singletonList(result), context);
         List<DatadogMetric> metrics = this.aggregator.flushMetrics();
-        String[] expectedTags = new String[] {"response_code:123", "sample_label:foo", "result:ok"};
+        String[] expectedTags = new String[] {"response_code:123", "sample_label:foo", "result:ok","key:value"};
         String[] expectedMetricNames = new String[] {
                 "jmeter.responses_count",
                 "jmeter.latency.max",

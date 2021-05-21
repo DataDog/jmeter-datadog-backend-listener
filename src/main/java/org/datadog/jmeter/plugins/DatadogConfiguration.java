@@ -5,6 +5,8 @@
 
 package org.datadog.jmeter.plugins;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.visualizers.backend.BackendListenerContext;
@@ -58,6 +60,12 @@ public class DatadogConfiguration {
      */
     private Pattern samplersRegex = null;
 
+    /**
+     * User configurable. This options configures which tags that are needed during a performance test
+     */
+    private List<String> inputTags;
+
+
     /* The names of configuration options that are shown in JMeter UI */
     private static final String API_URL_PARAM = "datadogUrl";
     private static final String LOG_INTAKE_URL_PARAM = "logIntakeUrl";
@@ -67,6 +75,7 @@ public class DatadogConfiguration {
     private static final String SEND_RESULTS_AS_LOGS = "sendResultsAsLogs";
     private static final String INCLUDE_SUB_RESULTS = "includeSubresults";
     private static final String SAMPLERS_REGEX = "samplersRegex";
+    private static final String INPUT_TAGS ="tagsToBeUsed";
 
     /* The default values for all configuration options */
     private static final String DEFAULT_API_URL = "https://api.datadoghq.com/api/";
@@ -76,6 +85,7 @@ public class DatadogConfiguration {
     private static final boolean DEFAULT_SEND_RESULTS_AS_LOGS = true;
     private static final boolean DEFAULT_INCLUDE_SUB_RESULTS = false;
     private static final String DEFAULT_SAMPLERS_REGEX = "";
+    private static final String DEFAULT_INPUT_TAGS = "key1:value1,key2:value2";
 
     private DatadogConfiguration(){}
 
@@ -89,12 +99,24 @@ public class DatadogConfiguration {
         arguments.addArgument(SEND_RESULTS_AS_LOGS, String.valueOf(DEFAULT_SEND_RESULTS_AS_LOGS));
         arguments.addArgument(INCLUDE_SUB_RESULTS, String.valueOf(DEFAULT_INCLUDE_SUB_RESULTS));
         arguments.addArgument(SAMPLERS_REGEX, DEFAULT_SAMPLERS_REGEX);
-
+        arguments.addArgument(INPUT_TAGS, DEFAULT_INPUT_TAGS);
         return arguments;
     }
 
     public static DatadogConfiguration parseConfiguration(BackendListenerContext context) throws DatadogConfigurationException {
         DatadogConfiguration configuration = new DatadogConfiguration();
+        List<String> inputTags = new ArrayList<>();
+        if(!context.getParameter(INPUT_TAGS).contains(":")){
+            inputTags.add("");
+        }else if(context.getParameter(INPUT_TAGS).contains(",")){
+            for (String item:context.getParameter(INPUT_TAGS).split(",")) {
+                inputTags.add(item);
+            }
+        }else{
+            inputTags.add(context.getParameter(INPUT_TAGS));
+        }
+
+        configuration.inputTags = inputTags;
 
         String apiKey = context.getParameter(API_KEY_PARAM);
         if (apiKey == null) {
@@ -166,5 +188,9 @@ public class DatadogConfiguration {
 
     public Pattern getSamplersRegex() {
         return samplersRegex;
+    }
+
+    public List<String> getInputTags(){
+        return inputTags;
     }
 }

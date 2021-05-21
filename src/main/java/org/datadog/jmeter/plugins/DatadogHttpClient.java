@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
  */
 public class DatadogHttpClient {
     private String apiKey;
+    private List<String> inputTags;
     private static final Logger logger = LoggerFactory.getLogger(DatadogHttpClient.class);
     private static final String METRIC = "v1/series";
     private static final String VALIDATE = "v1/validate";
@@ -39,10 +40,11 @@ public class DatadogHttpClient {
      * @param apiUrl the api url
      * @param logIntakeUrl the log intake url
      */
-    public DatadogHttpClient(String apiKey, String apiUrl, String logIntakeUrl) {
+    public DatadogHttpClient(String apiKey, String apiUrl, String logIntakeUrl, List<String> inputTags) {
         this.apiKey = apiKey;
         this.apiUrl = apiUrl;
         this.logIntakeUrl = logIntakeUrl;
+        this.inputTags = inputTags;
     }
 
     /**
@@ -99,6 +101,9 @@ public class DatadogHttpClient {
             points.add(point);
 
             JSONArray tags = new JSONArray();
+            for (String item:this.inputTags) {
+                tags.add(item);
+            }
             tags.addAll(Arrays.asList(datadogMetric.getTags()));
 
             JSONObject metric = new JSONObject();
