@@ -5,6 +5,7 @@
 
 package org.datadog.jmeter.plugins;
 
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -111,7 +112,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     public void setupTest(BackendListenerContext context) throws Exception {
         this.configuration = DatadogConfiguration.parseConfiguration(context);
 
-        datadogClient = new DatadogHttpClient(configuration.getApiKey(), configuration.getApiUrl(), configuration.getLogIntakeUrl(),configuration.getInputTags());
+        datadogClient = new DatadogHttpClient(configuration.getApiKey(), configuration.getApiUrl(), configuration.getLogIntakeUrl());
         boolean valid = datadogClient.validateConnection();
         if(!valid) {
             throw new DatadogApiException("Invalid apiKey");
@@ -193,9 +194,10 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
      */
     private void extractMetrics(SampleResult sampleResult) {
         String resultStatus = sampleResult.isSuccessful() ? "ok" : "ko";
-        String[] tags = new String[] {
-                "response_code:" + sampleResult.getResponseCode(), "sample_label:" + sampleResult.getSampleLabel(), "result:" + resultStatus
-        };
+
+        List<String> allTags = new ArrayList<>(Arrays.asList("response_code:" + sampleResult.getResponseCode(), "sample_label:" + sampleResult.getSampleLabel(), "result:" + resultStatus));
+        allTags.addAll(this.configuration.getCustomTags());
+        String[] tags = allTags.toArray(new String[allTags.size()]);
 
         if(sampleResult.isSuccessful()) {
             aggregator.incrementCounter("jmeter.responses_count", tags, sampleResult.getSampleCount() - sampleResult.getErrorCount());

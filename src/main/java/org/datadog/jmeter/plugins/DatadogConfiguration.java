@@ -63,7 +63,7 @@ public class DatadogConfiguration {
     /**
      * User configurable. This options configures which tags that are needed during a performance test
      */
-    private List<String> inputTags;
+    private List<String> customTags;
 
 
     /* The names of configuration options that are shown in JMeter UI */
@@ -75,7 +75,7 @@ public class DatadogConfiguration {
     private static final String SEND_RESULTS_AS_LOGS = "sendResultsAsLogs";
     private static final String INCLUDE_SUB_RESULTS = "includeSubresults";
     private static final String SAMPLERS_REGEX = "samplersRegex";
-    private static final String INPUT_TAGS ="tagsToBeUsed";
+    private static final String CUSTOM_TAGS ="customTags";
 
     /* The default values for all configuration options */
     private static final String DEFAULT_API_URL = "https://api.datadoghq.com/api/";
@@ -85,7 +85,7 @@ public class DatadogConfiguration {
     private static final boolean DEFAULT_SEND_RESULTS_AS_LOGS = true;
     private static final boolean DEFAULT_INCLUDE_SUB_RESULTS = false;
     private static final String DEFAULT_SAMPLERS_REGEX = "";
-    private static final String DEFAULT_INPUT_TAGS = "key1:value1,key2:value2";
+    private static final String DEFAULT_CUSTOM_TAGS = "";
 
     private DatadogConfiguration(){}
 
@@ -99,24 +99,12 @@ public class DatadogConfiguration {
         arguments.addArgument(SEND_RESULTS_AS_LOGS, String.valueOf(DEFAULT_SEND_RESULTS_AS_LOGS));
         arguments.addArgument(INCLUDE_SUB_RESULTS, String.valueOf(DEFAULT_INCLUDE_SUB_RESULTS));
         arguments.addArgument(SAMPLERS_REGEX, DEFAULT_SAMPLERS_REGEX);
-        arguments.addArgument(INPUT_TAGS, DEFAULT_INPUT_TAGS);
+        arguments.addArgument(CUSTOM_TAGS, DEFAULT_CUSTOM_TAGS);
         return arguments;
     }
 
     public static DatadogConfiguration parseConfiguration(BackendListenerContext context) throws DatadogConfigurationException {
         DatadogConfiguration configuration = new DatadogConfiguration();
-        List<String> inputTags = new ArrayList<>();
-        if(!context.getParameter(INPUT_TAGS).contains(":")){
-            inputTags.add("");
-        }else if(context.getParameter(INPUT_TAGS).contains(",")){
-            for (String item:context.getParameter(INPUT_TAGS).split(",")) {
-                inputTags.add(item);
-            }
-        }else{
-            inputTags.add(context.getParameter(INPUT_TAGS));
-        }
-
-        configuration.inputTags = inputTags;
 
         String apiKey = context.getParameter(API_KEY_PARAM);
         if (apiKey == null) {
@@ -155,6 +143,18 @@ public class DatadogConfiguration {
         configuration.includeSubResults = Boolean.parseBoolean(includeSubResults);
         configuration.samplersRegex = Pattern.compile(context.getParameter(SAMPLERS_REGEX, DEFAULT_SAMPLERS_REGEX));
 
+        String customTagsString = context.getParameter(CUSTOM_TAGS, String.valueOf(DEFAULT_CUSTOM_TAGS));
+        List<String> customTags = new ArrayList<>();
+        if(customTagsString.contains(",")){
+            for (String item:customTagsString.split(",")) {
+                customTags.add(item);
+            }
+        }else if(!customTagsString.equals("")){
+            customTags.add(customTagsString);
+        }
+
+        configuration.customTags = customTags;
+
         return configuration;
     }
 
@@ -190,7 +190,7 @@ public class DatadogConfiguration {
         return samplersRegex;
     }
 
-    public List<String> getInputTags(){
-        return inputTags;
+    public List<String> getCustomTags(){
+        return customTags;
     }
 }

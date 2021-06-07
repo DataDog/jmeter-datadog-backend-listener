@@ -23,7 +23,7 @@ The plugin has the following configuration options:
 |logsBatchSize|false|500|Logs are submitted in batches of size `logsBatchSize` as soon as this size is reached.|
 |sendResultsAsLogs|false|false|By default only metrics are reported to Datadog. To report individual test results as log events, set this field to `true`.|
 |includeSubresults|false|false|A subresult is for instance when an individual HTTP request has to follow redirects. By default subresults are ignored.|
-|tagsToBeUsed|false|key1:value1,key2:value2|Tags to be sent during performance - keys and values to be seperated by '"' and different items to be seperated by ","
+|customTags|false|`""`|Comma-separated list of tags to add to every metric
 
 ## Contributing
 
