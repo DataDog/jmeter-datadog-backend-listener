@@ -50,6 +50,7 @@ public class DatadogBackendClientTest
             put("sendResultsAsLogs", "true");
             put("includeSubresults", "false");
             put("samplersRegex", "^foo\\d*$");
+            put("customTags", "key:value");
         }
     };
     private ConcurrentAggregator aggregator = new ConcurrentAggregator();
@@ -93,80 +94,51 @@ public class DatadogBackendClientTest
         SampleResult result = createDummySampleResult("foo");
         this.client.handleSampleResults(Collections.singletonList(result), context);
         List<DatadogMetric> metrics = this.aggregator.flushMetrics();
-        String[] expectedTags = new String[] {"response_code:123", "sample_label:foo", "result:ok"};
-        String[] expectedMetricNames = new String[] {
-                "jmeter.responses_count",
-                "jmeter.latency.max",
-                "jmeter.latency.min",
-                "jmeter.latency.p99",
-                "jmeter.latency.p95",
-                "jmeter.latency.p90",
-                "jmeter.latency.avg",
-                "jmeter.latency.count",
-                "jmeter.response_time.max",
-                "jmeter.response_time.min",
-                "jmeter.response_time.p99",
-                "jmeter.response_time.p95",
-                "jmeter.response_time.p90",
-                "jmeter.response_time.avg",
-                "jmeter.response_time.count",
-                "jmeter.bytes_received.max",
-                "jmeter.bytes_received.min",
-                "jmeter.bytes_received.p99",
-                "jmeter.bytes_received.p95",
-                "jmeter.bytes_received.p90",
-                "jmeter.bytes_received.avg",
-                "jmeter.bytes_received.count",
-                "jmeter.bytes_sent.max",
-                "jmeter.bytes_sent.min",
-                "jmeter.bytes_sent.p99",
-                "jmeter.bytes_sent.p95",
-                "jmeter.bytes_sent.p90",
-                "jmeter.bytes_sent.avg",
-                "jmeter.bytes_sent.count",
-        };
-        double[] expectedMetricValues = new double[] {
-                10.0,
-                0.01195256210245945,
-                0.01195256210245945,
-                0.01195256210245945,
-                0.01195256210245945,
-                0.01195256210245945,
-                0.012000000104308128,
-                1.0,
-                0.12624150202599055,
-                0.12624150202599055,
-                0.12624150202599055,
-                0.12624150202599055,
-                0.12624150202599055,
-                0.125,
-                1.0,
-                12291.916561360777,
-                12291.916561360777,
-                12291.916561360777,
-                12291.916561360777,
-                12291.916561360777,
-                12345.0,
-                1.0,
-                124.37724692430666,
-                124.37724692430666,
-                124.37724692430666,
-                124.37724692430666,
-                124.37724692430666,
-                124.0,
-                1.0,
+        String[] expectedTags = new String[] {"response_code:123", "sample_label:foo", "result:ok", "key:value"};
+        Map<String, Double> expectedMetrics = new HashMap<String, Double>() {
+            {
+                put("jmeter.responses_count", 10.0);
+                put("jmeter.latency.max", 0.01195256210245945);
+                put("jmeter.latency.min", 0.01195256210245945);
+                put("jmeter.latency.p99", 0.01195256210245945);
+                put("jmeter.latency.p95", 0.01195256210245945);
+                put("jmeter.latency.p90", 0.01195256210245945);
+                put("jmeter.latency.avg", 0.012000000104308128);
+                put("jmeter.latency.count", 1.0);
+                put("jmeter.response_time.max", 0.12624150202599055);
+                put("jmeter.response_time.min", 0.12624150202599055);
+                put("jmeter.response_time.p99", 0.12624150202599055);
+                put("jmeter.response_time.p95", 0.12624150202599055);
+                put("jmeter.response_time.p90", 0.12624150202599055);
+                put("jmeter.response_time.avg", 0.125);
+                put("jmeter.response_time.count", 1.0);
+                put("jmeter.bytes_received.max", 12291.916561360777);
+                put("jmeter.bytes_received.min", 12291.916561360777);
+                put("jmeter.bytes_received.p99", 12291.916561360777);
+                put("jmeter.bytes_received.p95", 12291.916561360777);
+                put("jmeter.bytes_received.p90", 12291.916561360777);
+                put("jmeter.bytes_received.avg", 12345.0);
+                put("jmeter.bytes_received.count", 1.0);
+                put("jmeter.bytes_sent.max", 124.37724692430666);
+                put("jmeter.bytes_sent.min", 124.37724692430666);
+                put("jmeter.bytes_sent.p99", 124.37724692430666);
+                put("jmeter.bytes_sent.p95", 124.37724692430666);
+                put("jmeter.bytes_sent.p90", 124.37724692430666);
+                put("jmeter.bytes_sent.avg", 124.0);
+                put("jmeter.bytes_sent.count", 1.0);
+            }
         };
 
-        for(int i = 0; i < expectedMetricNames.length; i++){
-            DatadogMetric metric = metrics.get(i);
-            Assert.assertEquals(expectedMetricNames[i], metric.getName());
+        for(DatadogMetric metric : metrics) {
+            Assert.assertTrue(expectedMetrics.containsKey(metric.getName()));
+            Double expectedMetricValue = expectedMetrics.get(metric.getName());
             Assert.assertArrayEquals(expectedTags, metric.getTags());
             if(metric.getName().endsWith("count")) {
                 Assert.assertEquals("count", metric.getType());
             } else {
                 Assert.assertEquals("gauge", metric.getType());
             }
-            Assert.assertEquals(expectedMetricValues[i], metric.getValue(), 1e-12);
+            Assert.assertEquals(expectedMetricValue, metric.getValue(), 1e-12);
         }
     }
 
@@ -185,7 +157,7 @@ public class DatadogBackendClientTest
         SampleResult resultA = createDummySampleResult("fooA");
 
         this.client.handleSampleResults(Arrays.asList(result1, resultA), context);
-        String[] expectedTagsResult1 = new String[] {"response_code:123", "sample_label:foo1", "result:ok"};
+        String[] expectedTagsResult1 = new String[] {"response_code:123", "sample_label:foo1", "result:ok", "key:value"};
         for(DatadogMetric metric : this.aggregator.flushMetrics()){
             Assert.assertArrayEquals(expectedTagsResult1, metric.getTags());
         }

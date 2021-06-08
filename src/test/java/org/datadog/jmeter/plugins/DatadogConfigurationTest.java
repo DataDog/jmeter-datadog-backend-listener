@@ -5,6 +5,8 @@
 
 package org.datadog.jmeter.plugins;
 
+import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.PatternSyntaxException;
@@ -23,11 +25,12 @@ public class DatadogConfigurationTest {
     private static final String SEND_RESULTS_AS_LOGS = "sendResultsAsLogs";
     private static final String INCLUDE_SUB_RESULTS = "includeSubresults";
     private static final String SAMPLERS_REGEX = "samplersRegex";
+    private static final String CUSTOM_TAGS = "customTags";
 
     @Test
     public void testArguments(){
         Arguments args = DatadogConfiguration.getPluginArguments();
-        Assert.assertEquals(8, args.getArgumentCount());
+        Assert.assertEquals(9, args.getArgumentCount());
 
         Map<String, String> argumentsMap = args.getArgumentsAsMap();
         Assert.assertTrue(argumentsMap.containsKey(API_URL_PARAM));
@@ -38,6 +41,7 @@ public class DatadogConfigurationTest {
         Assert.assertTrue(argumentsMap.containsKey(SEND_RESULTS_AS_LOGS));
         Assert.assertTrue(argumentsMap.containsKey(INCLUDE_SUB_RESULTS));
         Assert.assertTrue(argumentsMap.containsKey(SAMPLERS_REGEX));
+        Assert.assertTrue(argumentsMap.containsKey(CUSTOM_TAGS));
     }
 
     @Test
@@ -52,6 +56,7 @@ public class DatadogConfigurationTest {
                 put(SEND_RESULTS_AS_LOGS, "true");
                 put(INCLUDE_SUB_RESULTS, "false");
                 put(SAMPLERS_REGEX, "false");
+                put(CUSTOM_TAGS, "key:value");
             }
         };
 
@@ -63,6 +68,7 @@ public class DatadogConfigurationTest {
         Assert.assertEquals("logIntakeUrl", datadogConfiguration.getLogIntakeUrl());
         Assert.assertEquals(10, datadogConfiguration.getMetricsMaxBatchSize());
         Assert.assertEquals(11, datadogConfiguration.getLogsBatchSize());
+        Assert.assertEquals(new ArrayList<>(Arrays.asList("key:value")), datadogConfiguration.getCustomTags());
         Assert.assertTrue(datadogConfiguration.shouldSendResultsAsLogs());
         Assert.assertFalse(datadogConfiguration.shouldIncludeSubResults());
     }
@@ -144,6 +150,39 @@ public class DatadogConfigurationTest {
             {
                 put("apiKey", "123456");
                 put(SAMPLERS_REGEX, "[asd]\\d+");
+            }
+        };
+        DatadogConfiguration.parseConfiguration(new BackendListenerContext(config));
+    }
+
+    @Test
+    public void testNoValueProvidedForCustomTags() throws DatadogConfigurationException {
+        Map<String, String> config = new HashMap<String, String>() {
+            {
+                put("apiKey", "123456");
+                put(CUSTOM_TAGS, "");
+            }
+        };
+        DatadogConfiguration.parseConfiguration(new BackendListenerContext(config));
+    }
+
+    @Test
+    public void testOnlyKeyForCustomTags() throws DatadogConfigurationException {
+        Map<String, String> config = new HashMap<String, String>() {
+            {
+                put("apiKey", "123456");
+                put(CUSTOM_TAGS, "key");
+            }
+        };
+        DatadogConfiguration.parseConfiguration(new BackendListenerContext(config));
+    }
+
+    @Test
+    public void testSpecialCharacterForCustomTags() throws DatadogConfigurationException {
+        Map<String, String> config = new HashMap<String, String>() {
+            {
+                put("apiKey", "123456");
+                put(CUSTOM_TAGS, "key*value");
             }
         };
         DatadogConfiguration.parseConfiguration(new BackendListenerContext(config));
