@@ -27,3 +27,10 @@ target/
 
 # Editors
 .idea/
+
+# Eclipse
+.settings/
+
+.classpath
+.factorypath
+.project
