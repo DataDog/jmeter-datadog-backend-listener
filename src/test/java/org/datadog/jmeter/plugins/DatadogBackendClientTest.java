@@ -86,6 +86,7 @@ public class DatadogBackendClientTest
         result.setSentBytes(124);
         result.setBytes((long)12345);
         result.setLatency(12);
+        result.setThreadName("bar baz");
         return result;
     }
 
@@ -94,7 +95,7 @@ public class DatadogBackendClientTest
         SampleResult result = createDummySampleResult("foo");
         this.client.handleSampleResults(Collections.singletonList(result), context);
         List<DatadogMetric> metrics = this.aggregator.flushMetrics();
-        String[] expectedTags = new String[] {"response_code:123", "sample_label:foo", "result:ok", "key:value"};
+        String[] expectedTags = new String[] {"response_code:123", "sample_label:foo", "thread_group:bar", "result:ok", "key:value"};
         Map<String, Double> expectedMetrics = new HashMap<String, Double>() {
             {
                 put("jmeter.responses_count", 10.0);
@@ -147,7 +148,7 @@ public class DatadogBackendClientTest
         SampleResult result = createDummySampleResult("foo");
         this.client.handleSampleResults(Collections.singletonList(result), context);
         Assert.assertEquals(1, this.logsBuffer.size());
-        String expectedPayload = "{\"sample_start_time\":1.0,\"response_code\":\"123\",\"headers_size\":0.0,\"sample_label\":\"foo\",\"latency\":12.0,\"group_threads\":0.0,\"idle_time\":0.0,\"error_count\":0.0,\"message\":\"\",\"url\":\"\",\"ddsource\":\"jmeter\",\"sent_bytes\":124.0,\"body_size\":0.0,\"content_type\":\"\",\"load_time\":125.0,\"thread_name\":\"\",\"sample_end_time\":126.0,\"bytes\":12345.0,\"connect_time\":0.0,\"sample_count\":10.0,\"data_type\":\"\",\"all_threads\":0.0,\"data_encoding\":null}";
+        String expectedPayload = "{\"sample_start_time\":1.0,\"response_code\":\"123\",\"headers_size\":0.0,\"sample_label\":\"foo\",\"latency\":12.0,\"group_threads\":0.0,\"idle_time\":0.0,\"error_count\":0.0,\"message\":\"\",\"url\":\"\",\"ddsource\":\"jmeter\",\"sent_bytes\":124.0,\"body_size\":0.0,\"content_type\":\"\",\"load_time\":125.0,\"thread_name\":\"bar baz\",\"sample_end_time\":126.0,\"bytes\":12345.0,\"connect_time\":0.0,\"sample_count\":10.0,\"data_type\":\"\",\"all_threads\":0.0,\"data_encoding\":null}";
         Assert.assertEquals(this.logsBuffer.get(0).toString(), expectedPayload);
     }
 
@@ -157,7 +158,7 @@ public class DatadogBackendClientTest
         SampleResult resultA = createDummySampleResult("fooA");
 
         this.client.handleSampleResults(Arrays.asList(result1, resultA), context);
-        String[] expectedTagsResult1 = new String[] {"response_code:123", "sample_label:foo1", "result:ok", "key:value"};
+        String[] expectedTagsResult1 = new String[] {"response_code:123", "sample_label:foo1", "thread_group:bar", "result:ok", "key:value"};
         for(DatadogMetric metric : this.aggregator.flushMetrics()){
             Assert.assertArrayEquals(expectedTagsResult1, metric.getTags());
         }
