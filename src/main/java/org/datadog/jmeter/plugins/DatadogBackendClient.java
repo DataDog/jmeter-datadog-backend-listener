@@ -195,7 +195,11 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     private void extractMetrics(SampleResult sampleResult) {
         String resultStatus = sampleResult.isSuccessful() ? "ok" : "ko";
 
-        List<String> allTags = new ArrayList<>(Arrays.asList("response_code:" + sampleResult.getResponseCode(), "sample_label:" + sampleResult.getSampleLabel(), "result:" + resultStatus));
+        // https://github.com/apache/jmeter/blob/rel/v5.4/src/core/src/main/java/org/apache/jmeter/samplers/SampleResult.java#L585-L589
+        String threadName = sampleResult.getThreadName();
+        String threadGroup = threadName.substring(0, Math.max(0, threadName.lastIndexOf(" ")));
+
+        List<String> allTags = new ArrayList<>(Arrays.asList("response_code:" + sampleResult.getResponseCode(), "sample_label:" + sampleResult.getSampleLabel(), "thread_group:" + threadGroup, "result:" + resultStatus));
         allTags.addAll(this.configuration.getCustomTags());
         String[] tags = allTags.toArray(new String[allTags.size()]);
 
