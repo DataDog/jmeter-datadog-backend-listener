@@ -28,6 +28,7 @@ import org.datadog.jmeter.plugins.aggregation.ConcurrentAggregator;
 import org.datadog.jmeter.plugins.exceptions.DatadogApiException;
 import org.datadog.jmeter.plugins.exceptions.DatadogConfigurationException;
 import org.datadog.jmeter.plugins.metrics.DatadogMetric;
+import org.datadog.jmeter.plugins.util.CommonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -195,9 +196,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     private void extractMetrics(SampleResult sampleResult) {
         String resultStatus = sampleResult.isSuccessful() ? "ok" : "ko";
 
-        // https://github.com/apache/jmeter/blob/rel/v5.4/src/core/src/main/java/org/apache/jmeter/samplers/SampleResult.java#L585-L589
-        String threadName = sampleResult.getThreadName();
-        String threadGroup = threadName.substring(0, Math.max(0, threadName.lastIndexOf(" ")));
+        String threadGroup = CommonUtils.parseThreadGroup(sampleResult.getThreadName());
 
         List<String> allTags = new ArrayList<>(Arrays.asList("response_code:" + sampleResult.getResponseCode(), "sample_label:" + sampleResult.getSampleLabel(), "thread_group:" + threadGroup, "result:" + resultStatus));
         allTags.addAll(this.configuration.getCustomTags());
@@ -222,10 +221,14 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     private void extractLogs(SampleResult sampleResult) {
         JSONObject payload = new JSONObject();
 
+        String threadName = sampleResult.getThreadName();
+        String threadGroup = CommonUtils.parseThreadGroup(threadName);
+
         if(sampleResult instanceof HTTPSampleResult) {
             payload.put("http_method", ((HTTPSampleResult) sampleResult).getHTTPMethod());
         }
-        payload.put("thread_name", sampleResult.getThreadName());
+        payload.put("thread_name", threadName);
+        payload.put("thread_group", threadGroup);
         payload.put("sample_start_time", (double) sampleResult.getStartTime());
         payload.put("sample_end_time", (double) sampleResult.getEndTime());
         payload.put("load_time", (double) sampleResult.getTime());
