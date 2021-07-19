@@ -6,7 +6,7 @@
 
   <groupId>org.datadog.jmeter.plugins</groupId>
   <artifactId>jmeter-datadog-backend-listener</artifactId>
-  <version>0.1.1-SNAPSHOT</version>
+  <version>0.2.0</version>
 
   <name>jmeter-datadog-backend-listener</name>
   <url>https://github.com/DataDog/jmeter-datadog-backend-listener</url>
