@@ -259,17 +259,25 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     }
 
     /**
-     * Called on a fixed schedule. Computes thread related metrics, collects and reset the aggregator and send all metrics to Datadog
-     * in batches.
+     * Computes thread related metrics and collects the aggregator.
      */
-    private void sendMetrics() {
+    public void addGlobalMetrics() {
         UserMetric userMetrics = getUserMetrics();
-        String[] tags = new String[]{};
+        List<String> allTags = this.configuration.getCustomTags();
+        String[] tags = allTags.toArray(new String[allTags.size()]);
+
         aggregator.addGauge("jmeter.active_threads.min", tags, userMetrics.getMinActiveThreads());
         aggregator.addGauge("jmeter.active_threads.max", tags, userMetrics.getMaxActiveThreads());
         aggregator.addGauge("jmeter.active_threads.avg", tags, userMetrics.getMeanActiveThreads());
         aggregator.addGauge("jmeter.threads.finished", tags, userMetrics.getFinishedThreads());
         aggregator.addGauge("jmeter.threads.started", tags, userMetrics.getStartedThreads());
+    }
+
+    /**
+     * Called on a fixed schedule. Resets the aggregator, and sends all metrics to Datadog in batches.
+     */
+    private void sendMetrics() {
+        this.addGlobalMetrics();
 
         List<DatadogMetric> metrics = aggregator.flushMetrics();
 
