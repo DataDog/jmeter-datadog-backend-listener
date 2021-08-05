@@ -141,6 +141,31 @@ public class DatadogBackendClientTest
             }
             Assert.assertEquals(expectedMetricValue, metric.getValue(), 1e-12);
         }
+
+        this.client.addGlobalMetrics();
+        List<DatadogMetric> globalMetrics = this.aggregator.flushMetrics();
+        String[] expectedGlobalTags = new String[] {"key:value"};
+        Map<String, Double> expectedGlobalMetrics = new HashMap<String, Double>() {
+            {
+                put("jmeter.active_threads.max", 0.0);
+                put("jmeter.active_threads.min", 0.0);
+                put("jmeter.active_threads.avg", 0.0);
+                put("jmeter.threads.finished", 0.0);
+                put("jmeter.threads.started", 0.0);
+            }
+        };
+
+        for(DatadogMetric metric : globalMetrics) {
+            Assert.assertTrue(expectedGlobalMetrics.containsKey(metric.getName()));
+            Double expectedMetricValue = expectedGlobalMetrics.get(metric.getName());
+            Assert.assertArrayEquals(expectedGlobalTags, metric.getTags());
+            if(metric.getName().endsWith("count")) {
+                Assert.assertEquals("count", metric.getType());
+            } else {
+                Assert.assertEquals("gauge", metric.getType());
+            }
+            Assert.assertEquals(expectedMetricValue, metric.getValue(), 1e-12);
+        }
     }
 
     @Test
