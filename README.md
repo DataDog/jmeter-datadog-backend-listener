@@ -10,7 +10,24 @@ Datadog Backend Listener for Apache JMeter is a JMeter plugin used to send test 
 
 ## Configuration
 
-To start reporting metrics and logs to the Datadog platform, add a `Backend Listener` to your JMeter test and set the `Backend Listener implementation` to `org.datadog.jmeter.plugins.DatadogBackendClient`.
+To start reporting metrics and logs to the Datadog platform, do the following: 
+
+1. If not already configured, download the [JMeter Plugins Manager JAR](https://jmeter-plugins.org/wiki/PluginsManager/).
+2. Once you've completed the download, place the `.jar` in the `lib/ext` directory within your JMeter installation. 
+3. Launch JMeter (or quit and re-open the application). 
+4. Go to `Options > Plugins Manager > Available Plugins`. 
+5. Search for "Datadog Backend Listener".
+6. Click the checbox next to the Datadog Backend Listener plugin.
+7. Click "Apply Changes and Restart JMeter".
+8. Right click on the thread group for which you want to send metrics to Datadog. 
+9. Go to `Add > Listener > Backend Listener`.
+10. Modify the `Backend Listener Implementation` and select `org.datadog.jmeter.plugins.DatadogBackendClient` from the drop-down. 
+11. Set the `apiKey` variable to [your Datadog API key](https://app.datadoghq.com/account/settings#api).
+12. Run your test and validate that metrics have appeared in Datadog.
+
+## Troubleshooting
+
+If for whatever reason you are not seeing JMeter metrics in Datadog, check your `jmeter.log` file, which should be in the `/bin` folder of your JMeter installation. 
 
 The plugin has the following configuration options:
 
@@ -43,3 +60,4 @@ Here are some generic guidelines:
 - Summarize your PR with a **meaningful title** and **write a meaningful description for it**.
 
 Your pull request must pass the CI before we can merge it. If you're seeing an error and don't think it's your fault, it may not be. Let us know in the PR and we'll get it sorted out.
+
