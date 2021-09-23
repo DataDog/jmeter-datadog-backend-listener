@@ -24,6 +24,10 @@ jobs:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
+      - name: Set up AWS
+        run: apt update && apt install -y python3 python3-pip && python3 -m pip install awscli
+      - name: Get GPG key
+        run: GPG_KEY=$(aws ssm get-parameter --region us-east-1 --name ci.jmeter-datadog-backend-listener.signing.gpg_private_key --with-decryption --query "Parameter.Value" --out text)
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots verify
       - run: mkdir artifacts && cp target/*.jar artifacts
