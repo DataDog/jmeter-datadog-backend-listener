@@ -145,7 +145,6 @@
             </execution>
         </executions>
         <configuration>
-          <javadocExecutable>${java.home}/bin/javadoc</javadocExecutable>
           <tags>
               <tag>
                   <name>http.response.details</name>

@@ -1,5 +1,5 @@
-FROM ubuntu:latest
+FROM maven:3.8.2-jdk-8-slim
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update
-RUN apt install -y openjdk-8-jdk maven python3 python3-pip
+RUN apt install -y python3 python3-pip
 RUN python3 -m pip install awscli
