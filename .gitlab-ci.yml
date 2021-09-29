@@ -64,6 +64,7 @@ create_key:
       - ./pubkeys/
 
 build_maven_image:
+  stage: build_maven_image
   image: $REGISTRY/docker:18.03.1
   when: manual
   script:
