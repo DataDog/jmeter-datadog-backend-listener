@@ -70,3 +70,4 @@ build_maven_image:
   script:
     - docker build --tag $BUILDER_IMAGE .  # Build the Dockerfile in this repo
     - docker push $BUILDER_IMAGE
+  tags: [ "runner:docker" ]
