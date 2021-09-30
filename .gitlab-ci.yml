@@ -1,6 +1,7 @@
 stages:
-  - deploy_to_sonatype
-  - create_key
+  - build
+  - deploy
+  - rotate_gpg_keys
 
 variables:
   REGISTRY: 486234852809.dkr.ecr.us-east-1.amazonaws.com
