@@ -11,6 +11,8 @@ deploy_to_sonatype:
   stage: deploy_to_sonatype
   tags: [ "runner:docker", "size:large" ]
   image: $BUILDER_IMAGE
+  only:
+    - tags
   when: manual
 
   script:
