@@ -5,7 +5,7 @@ stages:
 
 variables:
   REGISTRY: 486234852809.dkr.ecr.us-east-1.amazonaws.com
-  BUILDER_IMAGE: 486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/jmeter-datadog-backend-listener:latest
+  BUILDER_IMAGE: $REGISTRY/ci/jmeter-datadog-backend-listener:latest
 
 deploy_to_sonatype:
   stage: deploy_to_sonatype
