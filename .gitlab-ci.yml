@@ -61,7 +61,7 @@ create_key:
 
 # This job makes a new Docker image of maven used for `deploy_to_sonatype` and sends it to $BUILDER_IMAGE
 rebuild_maven_image:
-  stage: deploy_to_sonatype
+  stage: build
   image: $REGISTRY/docker:18.03.1
   when: manual
   script:
