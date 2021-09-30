@@ -8,7 +8,7 @@ variables:
   BUILDER_IMAGE: $REGISTRY/ci/jmeter-datadog-backend-listener:latest
 
 deploy_to_sonatype:
-  stage: deploy_to_sonatype
+  stage: deploy
   tags: [ "runner:docker", "size:large" ]
   image: $BUILDER_IMAGE
   only:
