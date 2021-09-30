@@ -13,6 +13,8 @@ deploy_to_sonatype:
   image: $BUILDER_IMAGE
   only:
     - tags
+  only:
+    - tags
   when: manual
 
   script:
