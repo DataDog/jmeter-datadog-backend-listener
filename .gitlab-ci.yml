@@ -47,7 +47,6 @@ create_key:
 
   tags:
     - "runner:docker"
-    - "size:large"
 
   image: $REGISTRY/ci/agent-key-management-tools/gpg:1
   variables:
