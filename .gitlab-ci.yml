@@ -42,7 +42,7 @@ deploy_to_sonatype:
 # This job generates the GPG key
 # NOTE: This is included for once gpg keys expire, this has not been run before
 create_key:
-  stage: create_key
+  stage: rotate_gpg_keys
   when: manual
 
   tags:
