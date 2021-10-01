@@ -9,7 +9,7 @@ variables:
 
 deploy_to_sonatype:
   stage: deploy
-  tags: [ "runner:docker", "size:large" ]
+  tags: [ "runner:docker" ]
   image: $BUILDER_IMAGE
   only:
     - tags
