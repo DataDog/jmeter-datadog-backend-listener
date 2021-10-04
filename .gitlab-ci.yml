@@ -11,8 +11,10 @@ deploy_to_sonatype:
   stage: deploy
   tags: [ "runner:docker", "size:large" ]
   image: $BUILDER_IMAGE
-  only:
-    - tags
+
+#  Commenting out while testing
+#  only:
+#    - tags
   when: manual
 
   script:
@@ -32,7 +34,7 @@ deploy_to_sonatype:
     - echo "Fetching signing key..."
     - GPG_KEY=$(aws ssm get-parameter --region us-east-1 --name ci.jmeter-datadog-backend-listener.signing.gpg_private_key --with-decryption --query "Parameter.Value" --out text)
 
-    - printf -- "$GPG_KEY" | gpg --import --batch &>/dev/null
+    - $GPG_KEY | gpg --import --batch &>/dev/null
 
     - set -x
 
