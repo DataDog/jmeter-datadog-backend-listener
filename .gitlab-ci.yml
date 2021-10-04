@@ -41,8 +41,6 @@ deploy_to_sonatype:
 
     - echo "Cleaning up..."
 
-    - gpg --delete-secret-key $GPG_KEY
-    - gpg --delete-key $GPG_KEY
     # unset the env variables
     - unset SONATYPE_USER
     - unset SONATYPE_PASS
