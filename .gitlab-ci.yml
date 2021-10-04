@@ -36,21 +36,20 @@ deploy_to_sonatype:
 
     - printf -- "$GPG_KEY" | gpg --import --batch
 
-    - set -x
-
     - echo "Building release..."
     - mvn -DperformRelease=true -DskipTests -Darguments=-DskipTests --settings ./settings.xml clean deploy
 
     - echo "Cleaning up..."
 
-    # remove key
-    - printf -- "$GPG_KEY" | gpg --delete-secret-key
-    - printf -- "$GPG_KEY" | gpg --delete-key
+    - gpg --delete-secret-key $GPG_KEY
+    - gpg --delete-key $GPG_KEY
     # unset the env variables
     - unset SONATYPE_USER
     - unset SONATYPE_PASS
     - unset GPG_PASSPHRASE
     - unset GPG_KEY
+
+    - set -x
 
 
 # This job generates the GPG key
