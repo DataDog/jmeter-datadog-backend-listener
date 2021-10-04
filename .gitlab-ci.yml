@@ -34,12 +34,24 @@ deploy_to_sonatype:
     - echo "Fetching signing key..."
     - GPG_KEY=$(aws ssm get-parameter --region us-east-1 --name ci.jmeter-datadog-backend-listener.signing.gpg_private_key --with-decryption --query "Parameter.Value" --out text)
 
-    - $GPG_KEY | gpg --import --batch &>/dev/null
+    - printf "$GPG_KEY" | gpg --import --batch &>/dev/null
 
     - set -x
 
     - echo "Building release..."
     - mvn -DperformRelease=true -DskipTests -Darguments=-DskipTests --settings ./settings.xml clean deploy
+
+    - echo "Cleaning up..."
+
+    # remove key
+    - printf "$GPG_KEY" | gpg --delete-secret-key &>/dev/null
+    - printf "$GPG_KEY" | gpg --delete-key &>/dev/null
+    # unset the env variables
+    - unset SONATYPE_USER
+    - unset SONATYPE_PASS
+    - unset GPG_PASSPHRASE
+    - unset GPG_KEY
+
 
 # This job generates the GPG key
 # NOTE: This is included for once gpg keys expire, this has not been run before
