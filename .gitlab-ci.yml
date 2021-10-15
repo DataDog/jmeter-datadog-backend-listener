@@ -12,9 +12,8 @@ deploy_to_sonatype:
   tags: [ "runner:docker" ]
   image: $BUILDER_IMAGE
 
-#  Commenting out while testing
-#  only:
-#    - tags
+  only:
+    - tags
   when: manual
 
   script:
