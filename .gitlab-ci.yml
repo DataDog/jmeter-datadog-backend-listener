@@ -1,0 +1,80 @@
+stages:
+  - build
+  - deploy
+  - rotate_gpg_keys
+
+variables:
+  REGISTRY: 486234852809.dkr.ecr.us-east-1.amazonaws.com
+  BUILDER_IMAGE: $REGISTRY/ci/jmeter-datadog-backend-listener:latest
+
+deploy_to_sonatype:
+  stage: deploy
+  tags: [ "runner:docker" ]
+  image: $BUILDER_IMAGE
+
+  only:
+    - tags
+  when: manual
+
+  script:
+    # Ensure we don't print commands being run to the logs during credential
+    # operations
+    - set +eux
+
+    - echo "Fetching Sonatype user..."
+    - export SONATYPE_USER=$(aws ssm get-parameter --region us-east-1 --name ci.jmeter-datadog-backend-listener.publishing.sonatype_username --with-decryption --query "Parameter.Value" --out text)
+
+    - echo "Fetching Sonatype password..."
+    - export SONATYPE_PASS=$(aws ssm get-parameter --region us-east-1 --name ci.jmeter-datadog-backend-listener.publishing.sonatype_password --with-decryption --query "Parameter.Value" --out text)
+
+    - echo "Fetching signing key password..."
+    - export GPG_PASSPHRASE=$(aws ssm get-parameter --region us-east-1 --name ci.jmeter-datadog-backend-listener.signing.gpg_passphrase --with-decryption --query "Parameter.Value" --out text)
+
+    - echo "Fetching signing key..."
+    - GPG_KEY=$(aws ssm get-parameter --region us-east-1 --name ci.jmeter-datadog-backend-listener.signing.gpg_private_key --with-decryption --query "Parameter.Value" --out text)
+
+    - printf -- "$GPG_KEY" | gpg --import --batch
+
+    - echo "Building release..."
+    - mvn -DperformRelease=true -DskipTests -Darguments=-DskipTests --settings ./settings.xml clean deploy
+
+    - echo "Cleaning up..."
+
+    # unset the env variables
+    - unset SONATYPE_USER
+    - unset SONATYPE_PASS
+    - unset GPG_PASSPHRASE
+    - unset GPG_KEY
+
+    - set -x
+
+
+# This job generates the GPG key
+# NOTE: This is included for once gpg keys expire, this has not been run before
+create_key:
+  stage: rotate_gpg_keys
+  when: manual
+
+  tags:
+    - "runner:docker"
+
+  image: $REGISTRY/ci/agent-key-management-tools/gpg:1
+  variables:
+    PROJECT_NAME: "jmeter-datadog-backend-listener"
+    EXPORT_TO_KEYSERVER: "false"
+  script:
+    - /create.sh
+  artifacts:
+    expire_in: 13 mos
+    paths:
+      - ./pubkeys/
+
+# This job makes a new Docker image of maven used for `deploy_to_sonatype` and sends it to $BUILDER_IMAGE
+rebuild_maven_image:
+  stage: build
+  image: $REGISTRY/docker:18.03.1
+  when: manual
+  script:
+    - docker build --tag $BUILDER_IMAGE .  # Build the Dockerfile from this directory
+    - docker push $BUILDER_IMAGE
+  tags: [ "runner:docker" ]

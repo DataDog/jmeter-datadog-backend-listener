@@ -3,13 +3,53 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
-  <groupId>org.datadog.jmeter.plugins</groupId>
+  <packaging>jar</packaging>
+  <groupId>com.datadoghq</groupId>
   <artifactId>jmeter-datadog-backend-listener</artifactId>
-  <version>0.2.0</version>
 
+  <version>0.2.0</version>
   <name>jmeter-datadog-backend-listener</name>
   <url>https://github.com/DataDog/jmeter-datadog-backend-listener</url>
+  <description>Datadog JMeter plugin</description>
+  <scm>
+      <connection>scm:git:git://github.com/DataDog/jmeter-datadog-backend-listener.git</connection>
+      <developerConnection>scm:git:https://github.com/DataDog/jmeter-datadog-backend-listener.git</developerConnection>
+      <url>https://github.com/DataDog/jmeter-datadog-backend-listener</url>
+      <tag>HEAD</tag>
+  </scm>
+
+  <licenses>
+    <license>
+        <name>Apache 2.0</name>
+        <url>https://github.com/DataDog/jmeter-datadog-backend-listener/blob/main/LICENSE</url>
+        <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+        <!-- Additions for tests and small generation changes -->
+        <id>datadog</id>
+        <name>Datadog developers</name>
+        <email>dev@datadoghq.com</email>
+    </developer>
+  </developers>
+
+
+  <distributionManagement>
+    <snapshotRepository>
+      <id>nexus</id>
+      <!-- Use the localhost endpoint for testing -->
+<!--       <url>http://localhost:8081/repository/maven-snapshots/</url>-->
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+    <repository>
+      <id>nexus</id>
+      <!-- Use the localhost endpoint for testing -->
+<!--       <url>http://localhost:8081/repository/maven-releases/</url>-->
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+  </distributionManagement>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -17,6 +57,7 @@
     <maven.compiler.target>1.8</maven.compiler.target>
     <java.version>1.8</java.version>
     <org.apache.jmeter.version>5.3</org.apache.jmeter.version>
+    <project.scm.id>github</project.scm.id>
   </properties>
 
   <dependencies>
@@ -79,6 +120,41 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.2.1</version>
+        <executions>
+            <execution>
+                <id>attach-sources</id>
+                <goals>
+                    <goal>jar-no-fork</goal>
+                </goals>
+            </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.10.4</version>
+        <executions>
+            <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                    <goal>jar</goal>
+                </goals>
+            </execution>
+        </executions>
+        <configuration>
+          <tags>
+              <tag>
+                  <name>http.response.details</name>
+                  <placement>a</placement>
+                  <head>Http Response Details:</head>
+              </tag>
+          </tags>
+        </configuration>
+      </plugin>
+      <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <version>2.5.3</version>
         <configuration>
@@ -97,14 +173,44 @@
         </executions>
       </plugin>
       <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>1.6.6</version>
+        <extensions>true</extensions>
         <executions>
           <execution>
-            <id>default-jar</id>
-            <phase>none</phase>
+            <id>default-deploy</id>
+            <phase>deploy</phase>
+            <goals>
+              <goal>deploy</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <serverId>nexus</serverId>
+          <!-- Use the localhost endpoint for testing -->
+          <!-- <nexusUrl>http://localhost:8081/repository/maven-releases/</nexusUrl> -->
+          <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+          <stagingProfileId>378eecbbe2cf9</stagingProfileId>
+          <autoReleaseAfterClose>false</autoReleaseAfterClose>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>1.6</version>
+        <executions>
+          <execution>
+            <id>sign-artifacts</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
             <configuration>
-              <finalName>unwanted</finalName>
-              <classifier>unwanted</classifier>
+              <gpgArguments>
+                <arg>--pinentry-mode</arg>
+                <arg>loopback</arg>
+              </gpgArguments>
             </configuration>
           </execution>
         </executions>
@@ -144,6 +250,9 @@
         <plugin>
           <artifactId>maven-deploy-plugin</artifactId>
           <version>2.8.2</version>
+          <configuration>
+            <skip>true</skip>
+          </configuration>
         </plugin>
         <!-- site lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#site_Lifecycle -->
         <plugin>
