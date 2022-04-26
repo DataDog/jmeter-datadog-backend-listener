@@ -1,6 +1,6 @@
 # Changes
 ## 0.3.0
-* [Added] Start Gitlab CI process for JMeter. See [#26](https://github.com/DataDog/jmeter-datadog-backend-listener/pull/26)
+* [Added] Add ability to release to Maven Central. See [#26](https://github.com/DataDog/jmeter-datadog-backend-listener/pull/26)
 * [Added] Add custom tags to global metrics. See [#23](https://github.com/DataDog/jmeter-datadog-backend-listener/pull/23)
 
 ## 0.2.0
