@@ -1,4 +1,7 @@
 # Changes
+## 0.3.0
+* [Added] Add ability to release to Maven Central. See [#26](https://github.com/DataDog/jmeter-datadog-backend-listener/pull/26)
+* [Added] Add custom tags to global metrics. See [#23](https://github.com/DataDog/jmeter-datadog-backend-listener/pull/23)
 
 ## 0.2.0
 * [Added] Add `customTags` config option. See [#15](https://github.com/DataDog/jmeter-datadog-backend-listener/pull/15)
