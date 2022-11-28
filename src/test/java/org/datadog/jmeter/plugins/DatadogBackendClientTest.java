@@ -171,7 +171,7 @@ public class DatadogBackendClientTest
     }
 
     @Test
-    public void testExtractLogs() throws ParseException{
+    public void testExtractLogs() throws ParseException {
         SampleResult result = createDummySampleResult("foo");
         this.client.handleSampleResults(Collections.singletonList(result), context);
         Assert.assertEquals(1, this.logsBuffer.size());
