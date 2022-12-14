@@ -163,6 +163,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
                 continue;
             }
             if(configuration.shouldIncludeSubResults()) {
+                this.extractData(sampleResult);
                 for (SampleResult subResult : sampleResult.getSubResults()) {
                     this.extractData(subResult);
                 }

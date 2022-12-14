@@ -181,6 +181,98 @@ public class DatadogBackendClientTest
     }
 
     @Test
+    public void testExtractMetricsWithSubResults() throws Exception {
+        // Set up a client with the `includeSubresults` option set to `true`
+        HashMap<String, String> config = new HashMap<String, String>(DEFAULT_VALID_TEST_CONFIG);
+        config.put("includeSubresults", "true");
+        DatadogBackendClient client = new DatadogBackendClient();
+        BackendListenerContext context = new BackendListenerContext(config);
+        client.setupTest(context);
+        
+        SampleResult result = createDummySampleResult("foo");
+        // Add subresults, as we want to ensure they're also included.
+        // Note that the subresult gets re-labeled here to foo-0.
+        result.addRawSubResult(createDummySampleResult("subresult"));
+        
+        client.handleSampleResults(Collections.singletonList(result), context);
+        List<DatadogMetric> metrics = this.aggregator.flushMetrics();
+        Map<String, Double> expectedMetrics = new HashMap<String, Double>() {
+            {
+                put("jmeter.responses_count", 10.0);
+                put("jmeter.latency.max", 0.01195256210245945);
+                put("jmeter.latency.min", 0.01195256210245945);
+                put("jmeter.latency.p99", 0.01195256210245945);
+                put("jmeter.latency.p95", 0.01195256210245945);
+                put("jmeter.latency.p90", 0.01195256210245945);
+                put("jmeter.latency.avg", 0.012000000104308128);
+                put("jmeter.latency.count", 1.0);
+                put("jmeter.response_time.max", 0.12624150202599055);
+                put("jmeter.response_time.min", 0.12624150202599055);
+                put("jmeter.response_time.p99", 0.12624150202599055);
+                put("jmeter.response_time.p95", 0.12624150202599055);
+                put("jmeter.response_time.p90", 0.12624150202599055);
+                put("jmeter.response_time.avg", 0.125);
+                put("jmeter.response_time.count", 1.0);
+                put("jmeter.bytes_received.max", 12291.916561360777);
+                put("jmeter.bytes_received.min", 12291.916561360777);
+                put("jmeter.bytes_received.p99", 12291.916561360777);
+                put("jmeter.bytes_received.p95", 12291.916561360777);
+                put("jmeter.bytes_received.p90", 12291.916561360777);
+                put("jmeter.bytes_received.avg", 12345.0);
+                put("jmeter.bytes_received.count", 1.0);
+                put("jmeter.bytes_sent.max", 124.37724692430666);
+                put("jmeter.bytes_sent.min", 124.37724692430666);
+                put("jmeter.bytes_sent.p99", 124.37724692430666);
+                put("jmeter.bytes_sent.p95", 124.37724692430666);
+                put("jmeter.bytes_sent.p90", 124.37724692430666);
+                put("jmeter.bytes_sent.avg", 124.0);
+                put("jmeter.bytes_sent.count", 1.0);
+            }
+        };
+
+        // We need to assert that the metrics of both the parent results as well as
+        // those in the subresults are present.
+
+        Map<String, DatadogMetric> mainMetricsMap = new HashMap<String, DatadogMetric>();
+        for(DatadogMetric metric : metrics) {
+            if (Arrays.asList(metric.getTags()).contains("sample_label:foo")) {
+                mainMetricsMap.put(metric.getName(), metric);
+            }
+        }
+
+        for(Map.Entry<String, Double> expectedMetric : expectedMetrics.entrySet()) {
+            Assert.assertTrue(mainMetricsMap.containsKey(expectedMetric.getKey()));
+            DatadogMetric metric = mainMetricsMap.get(expectedMetric.getKey());
+
+            if(metric.getName().endsWith("count")) {
+                Assert.assertEquals("count", metric.getType());
+            } else {
+                Assert.assertEquals("gauge", metric.getType());
+            }
+            Assert.assertEquals(expectedMetric.getValue(), metric.getValue(), 1e-12);
+        }
+
+        Map<String, DatadogMetric> childMetricsMap = new HashMap<String, DatadogMetric>();
+        for(DatadogMetric metric : metrics) {
+            if (Arrays.asList(metric.getTags()).contains("sample_label:foo-0")) {
+                childMetricsMap.put(metric.getName(), metric);
+            }
+        }
+
+        for(Map.Entry<String, Double> expectedMetric : expectedMetrics.entrySet()) {
+            Assert.assertTrue(childMetricsMap.containsKey(expectedMetric.getKey()));
+            DatadogMetric metric = childMetricsMap.get(expectedMetric.getKey());
+
+            if(metric.getName().endsWith("count")) {
+                Assert.assertEquals("count", metric.getType());
+            } else {
+                Assert.assertEquals("gauge", metric.getType());
+            }
+            Assert.assertEquals(expectedMetric.getValue(), metric.getValue(), 1e-12);
+        }
+    }
+
+    @Test
     public void testRegexNotMatching() {
         SampleResult result1 = createDummySampleResult("foo1");
         SampleResult resultA = createDummySampleResult("fooA");
