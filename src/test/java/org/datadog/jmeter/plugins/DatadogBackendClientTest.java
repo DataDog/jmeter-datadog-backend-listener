@@ -234,55 +234,22 @@ public class DatadogBackendClientTest
 
         // We need to assert that the metrics of both the parent results as well as
         // those in the subresults are present.
+        assertMetricsWithTag(metrics, expectedMetrics, "sample_label:foo");
+        assertMetricsWithTag(metrics, expectedMetrics, "sample_label:foo-0");
+        assertMetricsWithTag(metrics, expectedMetrics, "sample_label:foo-0-0");
+    }
 
-        Map<String, DatadogMetric> mainMetricsMap = new HashMap<String, DatadogMetric>();
+    private void assertMetricsWithTag(List<DatadogMetric> metrics, Map<String, Double> expectedMetrics, String tag) {
+        Map<String, DatadogMetric> metricsMap = new HashMap<String, DatadogMetric>();
         for(DatadogMetric metric : metrics) {
-            if (Arrays.asList(metric.getTags()).contains("sample_label:foo")) {
-                mainMetricsMap.put(metric.getName(), metric);
+            if (Arrays.asList(metric.getTags()).contains(tag)) {
+                metricsMap.put(metric.getName(), metric);
             }
         }
 
         for(Map.Entry<String, Double> expectedMetric : expectedMetrics.entrySet()) {
-            Assert.assertTrue(mainMetricsMap.containsKey(expectedMetric.getKey()));
-            DatadogMetric metric = mainMetricsMap.get(expectedMetric.getKey());
-
-            if(metric.getName().endsWith("count")) {
-                Assert.assertEquals("count", metric.getType());
-            } else {
-                Assert.assertEquals("gauge", metric.getType());
-            }
-            Assert.assertEquals(expectedMetric.getValue(), metric.getValue(), 1e-12);
-        }
-
-        Map<String, DatadogMetric> childMetricsMap = new HashMap<String, DatadogMetric>();
-        for(DatadogMetric metric : metrics) {
-            if (Arrays.asList(metric.getTags()).contains("sample_label:foo-0")) {
-                childMetricsMap.put(metric.getName(), metric);
-            }
-        }
-
-        for(Map.Entry<String, Double> expectedMetric : expectedMetrics.entrySet()) {
-            Assert.assertTrue(childMetricsMap.containsKey(expectedMetric.getKey()));
-            DatadogMetric metric = childMetricsMap.get(expectedMetric.getKey());
-
-            if(metric.getName().endsWith("count")) {
-                Assert.assertEquals("count", metric.getType());
-            } else {
-                Assert.assertEquals("gauge", metric.getType());
-            }
-            Assert.assertEquals(expectedMetric.getValue(), metric.getValue(), 1e-12);
-        }
-
-        childMetricsMap = new HashMap<String, DatadogMetric>();
-        for(DatadogMetric metric : metrics) {
-            if (Arrays.asList(metric.getTags()).contains("sample_label:foo-0-0")) {
-                childMetricsMap.put(metric.getName(), metric);
-            }
-        }
-
-        for(Map.Entry<String, Double> expectedMetric : expectedMetrics.entrySet()) {
-            Assert.assertTrue(childMetricsMap.containsKey(expectedMetric.getKey()));
-            DatadogMetric metric = childMetricsMap.get(expectedMetric.getKey());
+            Assert.assertTrue(metricsMap.containsKey(expectedMetric.getKey()));
+            DatadogMetric metric = metricsMap.get(expectedMetric.getKey());
 
             if(metric.getName().endsWith("count")) {
                 Assert.assertEquals("count", metric.getType());
