@@ -190,9 +190,11 @@ public class DatadogBackendClientTest
         client.setupTest(context);
         
         SampleResult result = createDummySampleResult("foo");
-        // Add subresults, as we want to ensure they're also included.
-        // Note that the subresult gets re-labeled here to foo-0.
-        result.addRawSubResult(createDummySampleResult("subresult"));
+        // Add subresults (2 deep), as we want to ensure they're also included.
+        // Note that subresults get re-labeled here to <parent>-<n>.
+        SampleResult subresult = createDummySampleResult("subresult");
+        result.addRawSubResult(subresult);
+        subresult.addRawSubResult(createDummySampleResult("subresult"));
         
         client.handleSampleResults(Collections.singletonList(result), context);
         List<DatadogMetric> metrics = this.aggregator.flushMetrics();
@@ -255,6 +257,25 @@ public class DatadogBackendClientTest
         Map<String, DatadogMetric> childMetricsMap = new HashMap<String, DatadogMetric>();
         for(DatadogMetric metric : metrics) {
             if (Arrays.asList(metric.getTags()).contains("sample_label:foo-0")) {
+                childMetricsMap.put(metric.getName(), metric);
+            }
+        }
+
+        for(Map.Entry<String, Double> expectedMetric : expectedMetrics.entrySet()) {
+            Assert.assertTrue(childMetricsMap.containsKey(expectedMetric.getKey()));
+            DatadogMetric metric = childMetricsMap.get(expectedMetric.getKey());
+
+            if(metric.getName().endsWith("count")) {
+                Assert.assertEquals("count", metric.getType());
+            } else {
+                Assert.assertEquals("gauge", metric.getType());
+            }
+            Assert.assertEquals(expectedMetric.getValue(), metric.getValue(), 1e-12);
+        }
+
+        childMetricsMap = new HashMap<String, DatadogMetric>();
+        for(DatadogMetric metric : metrics) {
+            if (Arrays.asList(metric.getTags()).contains("sample_label:foo-0-0")) {
                 childMetricsMap.put(metric.getName(), metric);
             }
         }
