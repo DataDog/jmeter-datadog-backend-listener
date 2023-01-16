@@ -162,13 +162,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
             if(!matcher.find()) {
                 continue;
             }
-            if(configuration.shouldIncludeSubResults()) {
-                for (SampleResult subResult : sampleResult.getSubResults()) {
-                    this.extractData(subResult);
-                }
-            } else {
-                this.extractData(sampleResult);
-            }
+            this.extractData(sampleResult);
         }
     }
 
@@ -185,6 +179,11 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
             if(logsBuffer.size() >= configuration.getLogsBatchSize()) {
                 datadogClient.submitLogs(logsBuffer);
                 logsBuffer.clear();
+            }
+        }
+        if(configuration.shouldIncludeSubResults()) {
+            for (SampleResult subResult : sampleResult.getSubResults()) {
+                this.extractData(subResult);
             }
         }
     }
