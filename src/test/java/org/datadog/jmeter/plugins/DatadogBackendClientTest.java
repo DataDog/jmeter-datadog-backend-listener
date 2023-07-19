@@ -58,6 +58,8 @@ public class DatadogBackendClientTest
     private ConcurrentAggregator aggregator = new ConcurrentAggregator();
     private BackendListenerContext context = new BackendListenerContext(DEFAULT_VALID_TEST_CONFIG);
     private List<JSONObject> logsBuffer;
+    private List<String> logsTags;
+
     @Before
     public void setUpMocks() throws Exception {
         logsBuffer = new ArrayList<>();
@@ -65,7 +67,11 @@ public class DatadogBackendClientTest
         PowerMockito.whenNew(ConcurrentAggregator.class).withAnyArguments().thenReturn(aggregator);
         PowerMockito.whenNew(DatadogHttpClient.class).withAnyArguments().thenReturn(httpClientMock);
         PowerMockito.when(httpClientMock.validateConnection()).thenReturn(true);
-        PowerMockito.doAnswer((e) -> logsBuffer.addAll(e.getArgument(0))).when(httpClientMock).submitLogs(any());
+        PowerMockito.doAnswer((e) -> {
+            logsBuffer.addAll(e.getArgument(0));
+            logsTags = (List<String>) e.getArgument(1, List.class);
+            return null;
+        }).when(httpClientMock).submitLogs(any(), any());
         client = new DatadogBackendClient();
         client.setupTest(context);
     }
@@ -178,6 +184,7 @@ public class DatadogBackendClientTest
         String expectedPayload = "{\"sample_start_time\":1.0,\"response_code\":\"123\",\"headers_size\":0.0,\"sample_label\":\"foo\",\"latency\":12.0,\"group_threads\":0.0,\"idle_time\":0.0,\"error_count\":0.0,\"message\":\"\",\"url\":\"\",\"ddsource\":\"jmeter\",\"sent_bytes\":124.0,\"thread_group\":\"bar\",\"body_size\":0.0,\"content_type\":\"\",\"load_time\":125.0,\"thread_name\":\"bar baz\",\"sample_end_time\":126.0,\"bytes\":12345.0,\"connect_time\":0.0,\"sample_count\":10.0,\"data_type\":\"\",\"all_threads\":0.0,\"data_encoding\":null}";
         JSONParser parser = new JSONParser(JSONParser.MODE_PERMISSIVE);
         Assert.assertEquals(this.logsBuffer.get(0), parser.parse(expectedPayload));
+        Assert.assertEquals(this.logsTags, Collections.singletonList("key:value"));
     }
 
     @Test

@@ -143,7 +143,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         this.sendMetrics();
 
         if (this.logsBuffer.size() > 0) {
-            this.datadogClient.submitLogs(this.logsBuffer);
+            this.datadogClient.submitLogs(this.logsBuffer, this.configuration.getCustomTags());
             this.logsBuffer.clear();
         }
         this.datadogClient = null;
@@ -177,7 +177,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         if(configuration.shouldSendResultsAsLogs()) {
             this.extractLogs(sampleResult);
             if(logsBuffer.size() >= configuration.getLogsBatchSize()) {
-                datadogClient.submitLogs(logsBuffer);
+                datadogClient.submitLogs(logsBuffer, this.configuration.getCustomTags());
                 logsBuffer.clear();
             }
         }
