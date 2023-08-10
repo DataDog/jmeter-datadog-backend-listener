@@ -9,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -16,6 +17,7 @@ import java.util.List;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
+import org.apache.http.client.utils.URIBuilder;
 import org.datadog.jmeter.plugins.metrics.DatadogMetric;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,13 +158,13 @@ public class DatadogHttpClient {
      *
      * @param payload the payload
      */
-    public void submitLogs(List<JSONObject> payload) {
+    public void submitLogs(List<JSONObject> payload, List<String> tags) {
         JSONArray logsArray = new JSONArray();
         logsArray.addAll(payload);
 
         HttpURLConnection conn;
         try {
-            URL url = new URL(this.logIntakeUrl);
+            URL url = new URL(buildLogsUrl(this.logIntakeUrl, tags));
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");
@@ -193,5 +195,14 @@ public class DatadogHttpClient {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private String buildLogsUrl(String logsUrl, List<String> tags) throws URISyntaxException {
+        if (tags.isEmpty()) {
+            return logsUrl;
+        }
+        return new URIBuilder(logsUrl)
+            .addParameter("ddtags", String.join(",", tags))
+            .toString();
     }
 }
