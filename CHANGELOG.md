@@ -1,4 +1,8 @@
 # Changes
+
+## 0.4.0
+* [Changed] Set configured tags on plugin generated logs. (See [#45](https://github.com/DataDog/jmeter-datadog-backend-listener/pull/45)).
+
 ## 0.3.1
 * [Fixed] Setting `includeSubresults` to `true` will now also include the parent results as well as subresults recursively (See [#35](https://github.com/DataDog/jmeter-datadog-backend-listener/pull/35)).
 
