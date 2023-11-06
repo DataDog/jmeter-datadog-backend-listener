@@ -5,17 +5,6 @@
 
 package org.datadog.jmeter.plugins;
 
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import net.minidev.json.JSONObject;
 import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.protocol.http.sampler.HTTPSampleResult;
@@ -32,6 +21,18 @@ import org.datadog.jmeter.plugins.util.CommonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.stream.Collectors;
+
 /**
  * An implementation of AbstractBackendListenerClient that aggregates and forwards metrics and log events
  * to Datadog.
@@ -43,39 +44,32 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
      * The logger. Anything written with it appears on JMeter console tab.
      */
     private static final Logger log = LoggerFactory.getLogger(DatadogBackendClient.class);
-
+    /**
+     * How often to send metrics. During this interval metrics are aggregated (i.e multiple counts values are added together, gauge
+     * replaces the previous value etc.). At the end of that interval the result of aggregation is sent to Datadog.
+     */
+    private static final long METRICS_SEND_INTERVAL = JMeterUtils.getPropDefault("datadog.send_interval", 10);
     /**
      * An instance of {@link DatadogHttpClient}.
      * Instantiated during the test set up phase, and used to send metrics and logs.
      */
     private DatadogHttpClient datadogClient;
-
     /**
      * An instance of {@link DatadogConfiguration}.
      * Instantiated during the test set up phase and contains the plugin configuration.
      */
     private DatadogConfiguration configuration;
-
     /**
      * An instance of {@link ConcurrentAggregator}.
      * Instantiated upon creation of the DatadogBackendClient class. Aggregates metrics until instructed to flush.
      * Flushing occurs at a fixed schedule rate, @see {@link #timerHandle} and {@link #METRICS_SEND_INTERVAL}.
      */
     private ConcurrentAggregator aggregator = new ConcurrentAggregator();
-
     /**
      * An list of JSON log payloads to buffer calls to the Datadog API. Unlike metrics, logs are not aggregated before being sent. Thus
      * flushing of logs doesn't occur at a fixed time interval but rather once the buffer is bigger than {@link DatadogConfiguration#getLogsBatchSize()}.
      */
     private List<JSONObject> logsBuffer = new ArrayList<>();
-
-
-    /**
-     * How often to send metrics. During this interval metrics are aggregated (i.e multiple counts values are added together, gauge
-     * replaces the previous value etc.). At the end of that interval the result of aggregation is sent to Datadog.
-     */
-    private static final long METRICS_SEND_INTERVAL = JMeterUtils.getPropDefault("datadog.send_interval", 10);
-
     /**
      * Used to schedule flushing of metrics every {@link #METRICS_SEND_INTERVAL} seconds.
      */
@@ -96,6 +90,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
 
     /**
      * Used by JMeter to know the list of parameters to show in the UI.
+     *
      * @return the parameters as an Arguments object.
      */
     @Override
@@ -105,9 +100,10 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
 
     /**
      * Called before starting the test.
+     *
      * @param context An object used to fetch user configuration.
      * @throws DatadogConfigurationException If the configuration is invalid.
-     * @throws DatadogApiException If the plugin can't connect to Datadog.
+     * @throws DatadogApiException           If the plugin can't connect to Datadog.
      */
     @Override
     public void setupTest(BackendListenerContext context) throws Exception {
@@ -115,7 +111,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
 
         datadogClient = new DatadogHttpClient(configuration.getApiKey(), configuration.getApiUrl(), configuration.getLogIntakeUrl());
         boolean valid = datadogClient.validateConnection();
-        if(!valid) {
+        if (!valid) {
             throw new DatadogApiException("Invalid apiKey");
         }
 
@@ -126,6 +122,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
 
     /**
      * Called after completion of the test.
+     *
      * @param context unused - An object used to fetch user configuration.
      * @throws Exception If something goes wrong while stopping
      */
@@ -142,7 +139,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
 
         this.sendMetrics();
 
-        if (this.logsBuffer.size() > 0) {
+        if (!this.logsBuffer.isEmpty()) {
             this.datadogClient.submitLogs(this.logsBuffer, this.configuration.getCustomTags());
             this.logsBuffer.clear();
         }
@@ -152,14 +149,15 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
 
     /**
      * Main entry point, this method is called when new results are computed.
-     * @param list The results to parse.
+     *
+     * @param list                   The results to parse.
      * @param backendListenerContext unused - An object used to fetch user configuration.
      */
     @Override
     public void handleSampleResults(List<SampleResult> list, BackendListenerContext backendListenerContext) {
         for (SampleResult sampleResult : list) {
             Matcher matcher = configuration.getSamplersRegex().matcher(sampleResult.getSampleLabel());
-            if(!matcher.find()) {
+            if (!matcher.find()) {
                 continue;
             }
             this.extractData(sampleResult);
@@ -168,28 +166,36 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
 
     /**
      * Called for each individual result. It calls {@link #extractMetrics(SampleResult)} and {@link #extractLogs(SampleResult)}.
+     *
      * @param sampleResult the result
      */
     private void extractData(SampleResult sampleResult) {
         UserMetric userMetrics = this.getUserMetrics();
         userMetrics.add(sampleResult);
         this.extractMetrics(sampleResult);
-        if(configuration.shouldSendResultsAsLogs()) {
-            this.extractLogs(sampleResult);
-            if(logsBuffer.size() >= configuration.getLogsBatchSize()) {
-                datadogClient.submitLogs(logsBuffer, this.configuration.getCustomTags());
-                logsBuffer.clear();
+        if (configuration.shouldSendResultsAsLogs()) {
+            if (!configuration.shouldSendOnlyErrorsAsLogs() || (configuration.shouldSendOnlyErrorsAsLogs() && isErrorResponse(sampleResult))) {
+                this.extractLogs(sampleResult);
+                if (logsBuffer.size() >= configuration.getLogsBatchSize()) {
+                    datadogClient.submitLogs(logsBuffer, this.configuration.getCustomTags());
+                    logsBuffer.clear();
+                }
             }
         }
-        if(configuration.shouldIncludeSubResults()) {
+        if (configuration.shouldIncludeSubResults()) {
             for (SampleResult subResult : sampleResult.getSubResults()) {
                 this.extractData(subResult);
             }
         }
     }
 
+    private boolean isErrorResponse(SampleResult sampleResult) {
+        return Integer.parseInt(sampleResult.getResponseCode()) >= HttpURLConnection.HTTP_BAD_REQUEST;
+    }
+
     /**
      * Called for each individual result. It extracts metrics and give them to the {@link ConcurrentAggregator} instance for aggregation.
+     *
      * @param sampleResult the result
      */
     private void extractMetrics(SampleResult sampleResult) {
@@ -201,7 +207,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         allTags.addAll(this.configuration.getCustomTags());
         String[] tags = allTags.toArray(new String[allTags.size()]);
 
-        if(sampleResult.isSuccessful()) {
+        if (sampleResult.isSuccessful()) {
             aggregator.incrementCounter("jmeter.responses_count", tags, sampleResult.getSampleCount() - sampleResult.getErrorCount());
         } else {
             aggregator.incrementCounter("jmeter.responses_count", tags, sampleResult.getErrorCount());
@@ -215,6 +221,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
 
     /**
      * Called for each individual result. It extracts logs and append them to the {@link #logsBuffer} buffer.
+     *
      * @param sampleResult the result
      */
     private void extractLogs(SampleResult sampleResult) {
@@ -223,7 +230,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         String threadName = sampleResult.getThreadName();
         String threadGroup = CommonUtils.parseThreadGroup(threadName);
 
-        if(sampleResult instanceof HTTPSampleResult) {
+        if (sampleResult instanceof HTTPSampleResult) {
             payload.put("http_method", ((HTTPSampleResult) sampleResult).getHTTPMethod());
         }
         payload.put("thread_name", threadName);
@@ -282,7 +289,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
 
         AtomicInteger counter = new AtomicInteger();
         metrics.stream().collect(Collectors.groupingBy(it -> counter.getAndIncrement() / configuration.getMetricsMaxBatchSize())).values().forEach(
-                x -> datadogClient.submitMetrics(x)
+            x -> datadogClient.submitMetrics(x)
         );
     }
 }
