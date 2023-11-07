@@ -21,7 +21,6 @@ import org.datadog.jmeter.plugins.util.CommonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -31,6 +30,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -190,7 +190,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     }
 
     private boolean isErrorResponse(SampleResult sampleResult) {
-        return Integer.parseInt(sampleResult.getResponseCode()) >= HttpURLConnection.HTTP_BAD_REQUEST;
+        return !Pattern.compile("[123][01235][0-9]").matcher(sampleResult.getResponseCode()).matches();
     }
 
     /**
