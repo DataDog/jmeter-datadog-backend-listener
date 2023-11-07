@@ -82,7 +82,7 @@ public class DatadogConfiguration {
     private static final String INCLUDE_SUB_RESULTS = "includeSubresults";
     private static final String SEND_ONLY_ERRORS_AS_LOGS = "sendOnlyErrorsAsLogs";
     private static final String SAMPLERS_REGEX = "samplersRegex";
-    private static final String CUSTOM_TAGS = "customTags";
+    private static final String CUSTOM_TAGS ="customTags";
 
     /* The default values for all configuration options */
     private static final String DEFAULT_API_URL = "https://api.datadoghq.com/api/";
@@ -95,8 +95,7 @@ public class DatadogConfiguration {
     private static final String DEFAULT_SAMPLERS_REGEX = "";
     private static final String DEFAULT_CUSTOM_TAGS = "";
 
-    private DatadogConfiguration() {
-    }
+    private DatadogConfiguration(){}
 
     public static Arguments getPluginArguments() {
         Arguments arguments = new Arguments();
@@ -141,19 +140,19 @@ public class DatadogConfiguration {
         }
 
         String sendResultsAsLogs = context.getParameter(SEND_RESULTS_AS_LOGS, String.valueOf(DEFAULT_SEND_RESULTS_AS_LOGS));
-        if (!sendResultsAsLogs.toLowerCase().equals("false") && !sendResultsAsLogs.toLowerCase().equals("true")) {
+        if(!sendResultsAsLogs.toLowerCase().equals("false") && !sendResultsAsLogs.toLowerCase().equals("true")) {
             throw new DatadogConfigurationException("Invalid 'sendResultsAsLogs'. Value '" + sendResultsAsLogs + "' is not a boolean.");
         }
         configuration.sendResultsAsLogs = Boolean.parseBoolean(sendResultsAsLogs);
 
         String includeSubResults = context.getParameter(INCLUDE_SUB_RESULTS, String.valueOf(DEFAULT_INCLUDE_SUB_RESULTS));
-        if (!includeSubResults.toLowerCase().equals("false") && !includeSubResults.toLowerCase().equals("true")) {
+        if(!includeSubResults.toLowerCase().equals("false") && !includeSubResults.toLowerCase().equals("true")) {
             throw new DatadogConfigurationException("Invalid 'includeSubResults'. Value '" + includeSubResults + "' is not a boolean.");
         }
         configuration.includeSubResults = Boolean.parseBoolean(includeSubResults);
 
         String sendOnlyErrorsAsLogs = context.getParameter(SEND_ONLY_ERRORS_AS_LOGS, String.valueOf(DEFAULT_SEND_ONLY_ERRORS_AS_LOGS));
-        if (!sendOnlyErrorsAsLogs.toLowerCase().equals("false") && !sendOnlyErrorsAsLogs.toLowerCase().equals("true")) {
+        if(!sendOnlyErrorsAsLogs.toLowerCase().equals("false") && !sendOnlyErrorsAsLogs.toLowerCase().equals("true")) {
             throw new DatadogConfigurationException("Invalid 'sendOnlyErrorsAsLogs'. Value '" + sendOnlyErrorsAsLogs + "' is not a boolean.");
         }
         configuration.sendOnlyErrorsAsLogs = Boolean.parseBoolean(sendOnlyErrorsAsLogs);
@@ -162,11 +161,11 @@ public class DatadogConfiguration {
 
         String customTagsString = context.getParameter(CUSTOM_TAGS, String.valueOf(DEFAULT_CUSTOM_TAGS));
         List<String> customTags = new ArrayList<>();
-        if (customTagsString.contains(",")) {
-            for (String item : customTagsString.split(",")) {
+        if(customTagsString.contains(",")){
+            for (String item:customTagsString.split(",")) {
                 customTags.add(item);
             }
-        } else if (!customTagsString.equals("")) {
+        }else if(!customTagsString.equals("")){
             customTags.add(customTagsString);
         }
 
@@ -211,7 +210,7 @@ public class DatadogConfiguration {
         return samplersRegex;
     }
 
-    public List<String> getCustomTags() {
+    public List<String> getCustomTags(){
         return customTags;
     }
 }

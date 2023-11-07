@@ -30,7 +30,7 @@ public class DatadogConfigurationTest {
     private static final String CUSTOM_TAGS = "customTags";
 
     @Test
-    public void testArguments() {
+    public void testArguments(){
         Arguments args = DatadogConfiguration.getPluginArguments();
         Assert.assertEquals(10, args.getArgumentCount());
 
