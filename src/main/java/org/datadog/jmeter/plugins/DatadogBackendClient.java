@@ -30,7 +30,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -176,7 +175,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         userMetrics.add(sampleResult);
         this.extractMetrics(sampleResult);
         if(configuration.shouldSendResultsAsLogs()) {
-            if(!configuration.shouldSendOnlyErrorsAsLogs() || (configuration.shouldSendOnlyErrorsAsLogs() && isErrorResponse(sampleResult))) {
+            if(!shouldExcludeSampleResultAsLogs(sampleResult)) {
                 this.extractLogs(sampleResult);
                 if (logsBuffer.size() >= configuration.getLogsBatchSize()) {
                     datadogClient.submitLogs(logsBuffer, this.configuration.getCustomTags());
@@ -192,11 +191,11 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     }
 
     /**
-     * Called for each individual result. It checks if response code is error
+     * Called for each individual result. It checks if logs for the sample result should be excluded
      * @param sampleResult the result
      */
-    private boolean isErrorResponse(SampleResult sampleResult) {
-        return !Pattern.compile("[123][01235][0-9]").matcher(sampleResult.getResponseCode()).matches();
+    private boolean shouldExcludeSampleResultAsLogs(SampleResult sampleResult) {
+        return configuration.getExcludeLogsResponseCodeRegex().matcher(sampleResult.getResponseCode()).matches();
     }
 
     /**

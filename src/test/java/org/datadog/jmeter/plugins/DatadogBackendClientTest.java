@@ -5,14 +5,6 @@
 
 package org.datadog.jmeter.plugins;
 
-import static org.mockito.ArgumentMatchers.any;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
 import net.minidev.json.parser.ParseException;
@@ -29,6 +21,10 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+
+import java.util.*;
+
+import static org.mockito.ArgumentMatchers.any;
 
 /**
  * Unit test for simple App.
@@ -268,7 +264,7 @@ public class DatadogBackendClientTest
     }
 
     @Test
-    public void testRegexNotMatching() {
+    public void testSamplersRegexNotMatching() {
         SampleResult result1 = createDummySampleResult("foo1");
         SampleResult resultA = createDummySampleResult("fooA");
 

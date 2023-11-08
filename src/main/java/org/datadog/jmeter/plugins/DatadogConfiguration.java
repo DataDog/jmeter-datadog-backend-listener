@@ -51,9 +51,10 @@ public class DatadogConfiguration {
     private boolean sendResultsAsLogs;
 
     /**
-     * This options configures whether the plugin should submit only errors as Datadog logs.
+     * User configurable. This options configures which Datadog logs to exclude from submission using a regex
+     * that matches on the response code.
      */
-    private boolean sendOnlyErrorsAsLogs;
+    private Pattern excludeLogsResponseCodeRegex = null;
 
     /**
      * This options configures whether or not to collect metrics and logs for jmeter subresults.
@@ -80,7 +81,7 @@ public class DatadogConfiguration {
     private static final String LOGS_BATCH_SIZE = "logsBatchSize";
     private static final String SEND_RESULTS_AS_LOGS = "sendResultsAsLogs";
     private static final String INCLUDE_SUB_RESULTS = "includeSubresults";
-    private static final String SEND_ONLY_ERRORS_AS_LOGS = "sendOnlyErrorsAsLogs";
+    private static final String EXCLUDE_LOGS_RESPONSE_CODE_REGEX = "excludeLogsResponseCodeRegex";
     private static final String SAMPLERS_REGEX = "samplersRegex";
     private static final String CUSTOM_TAGS ="customTags";
 
@@ -91,7 +92,7 @@ public class DatadogConfiguration {
     private static final int DEFAULT_LOGS_BATCH_SIZE = 500;
     private static final boolean DEFAULT_SEND_RESULTS_AS_LOGS = true;
     private static final boolean DEFAULT_INCLUDE_SUB_RESULTS = false;
-    private static final boolean DEFAULT_SEND_ONLY_ERRORS_AS_LOGS = false;
+    private static final String DEFAULT_EXCLUDE_LOGS_RESPONSE_CODE_REGEX = "";
     private static final String DEFAULT_SAMPLERS_REGEX = "";
     private static final String DEFAULT_CUSTOM_TAGS = "";
 
@@ -106,7 +107,7 @@ public class DatadogConfiguration {
         arguments.addArgument(LOGS_BATCH_SIZE, String.valueOf(DEFAULT_LOGS_BATCH_SIZE));
         arguments.addArgument(SEND_RESULTS_AS_LOGS, String.valueOf(DEFAULT_SEND_RESULTS_AS_LOGS));
         arguments.addArgument(INCLUDE_SUB_RESULTS, String.valueOf(DEFAULT_INCLUDE_SUB_RESULTS));
-        arguments.addArgument(SEND_ONLY_ERRORS_AS_LOGS, String.valueOf(DEFAULT_SEND_ONLY_ERRORS_AS_LOGS));
+        arguments.addArgument(EXCLUDE_LOGS_RESPONSE_CODE_REGEX, DEFAULT_EXCLUDE_LOGS_RESPONSE_CODE_REGEX);
         arguments.addArgument(SAMPLERS_REGEX, DEFAULT_SAMPLERS_REGEX);
         arguments.addArgument(CUSTOM_TAGS, DEFAULT_CUSTOM_TAGS);
         return arguments;
@@ -151,13 +152,9 @@ public class DatadogConfiguration {
         }
         configuration.includeSubResults = Boolean.parseBoolean(includeSubResults);
 
-        String sendOnlyErrorsAsLogs = context.getParameter(SEND_ONLY_ERRORS_AS_LOGS, String.valueOf(DEFAULT_SEND_ONLY_ERRORS_AS_LOGS));
-        if(!sendOnlyErrorsAsLogs.toLowerCase().equals("false") && !sendOnlyErrorsAsLogs.toLowerCase().equals("true")) {
-            throw new DatadogConfigurationException("Invalid 'sendOnlyErrorsAsLogs'. Value '" + sendOnlyErrorsAsLogs + "' is not a boolean.");
-        }
-        configuration.sendOnlyErrorsAsLogs = Boolean.parseBoolean(sendOnlyErrorsAsLogs);
-
         configuration.samplersRegex = Pattern.compile(context.getParameter(SAMPLERS_REGEX, DEFAULT_SAMPLERS_REGEX));
+
+        configuration.excludeLogsResponseCodeRegex = Pattern.compile(context.getParameter(EXCLUDE_LOGS_RESPONSE_CODE_REGEX, DEFAULT_EXCLUDE_LOGS_RESPONSE_CODE_REGEX));
 
         String customTagsString = context.getParameter(CUSTOM_TAGS, String.valueOf(DEFAULT_CUSTOM_TAGS));
         List<String> customTags = new ArrayList<>();
@@ -202,8 +199,8 @@ public class DatadogConfiguration {
         return includeSubResults;
     }
 
-    public boolean shouldSendOnlyErrorsAsLogs() {
-        return sendOnlyErrorsAsLogs;
+    public Pattern getExcludeLogsResponseCodeRegex() {
+        return excludeLogsResponseCodeRegex;
     }
 
     public Pattern getSamplersRegex() {
