@@ -5,17 +5,16 @@
 
 package org.datadog.jmeter.plugins;
 
-import org.apache.jmeter.config.Arguments;
-import org.apache.jmeter.visualizers.backend.BackendListenerContext;
-import org.datadog.jmeter.plugins.exceptions.DatadogConfigurationException;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.PatternSyntaxException;
+import org.apache.jmeter.config.Arguments;
+import org.apache.jmeter.visualizers.backend.BackendListenerContext;
+import org.datadog.jmeter.plugins.exceptions.DatadogConfigurationException;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class DatadogConfigurationTest {
     private static final String API_URL_PARAM = "datadogUrl";

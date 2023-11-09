@@ -5,13 +5,12 @@
 
 package org.datadog.jmeter.plugins;
 
-import org.apache.jmeter.config.Arguments;
-import org.apache.jmeter.visualizers.backend.BackendListenerContext;
-import org.datadog.jmeter.plugins.exceptions.DatadogConfigurationException;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+import org.apache.jmeter.config.Arguments;
+import org.apache.jmeter.visualizers.backend.BackendListenerContext;
+import org.datadog.jmeter.plugins.exceptions.DatadogConfigurationException;
 
 
 public class DatadogConfiguration {
