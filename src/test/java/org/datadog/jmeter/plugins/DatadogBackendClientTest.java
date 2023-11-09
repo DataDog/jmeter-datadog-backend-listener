@@ -47,7 +47,7 @@ public class DatadogBackendClientTest
             put("logsBatchSize", "0");
             put("sendResultsAsLogs", "true");
             put("includeSubresults", "false");
-            put("excludeLogsResponseCodeRegex", "^[23][0-5][0-9]$");
+            put("excludeLogsResponseCodeRegex", "");
             put("samplersRegex", "^foo\\d*$");
             put("customTags", "key:value");
         }
@@ -283,13 +283,34 @@ public class DatadogBackendClientTest
     }
 
     @Test
-    public void testExcludeLogsResponseCodeRegexMatching() {
+    public void testExcludeLogsResponseCodeRegexDefaultEmpty() {
         SampleResult result1 = createDummySampleResult("foo1", "200");
         SampleResult result2 = createDummySampleResult("foo2", "301");
         SampleResult result3 = createDummySampleResult("foo3", "404");
         SampleResult result4 = createDummySampleResult("foo4", "Non HTTP response code: java.net.NoRouteToHostException");
 
         this.client.handleSampleResults(Arrays.asList(result1, result2, result3, result4), context);
+        Assert.assertEquals(4, this.logsBuffer.size());
+        Assert.assertEquals("foo1", this.logsBuffer.get(0).getAsString("sample_label"));
+        Assert.assertEquals("foo2", this.logsBuffer.get(1).getAsString("sample_label"));
+        Assert.assertEquals("foo3", this.logsBuffer.get(2).getAsString("sample_label"));
+        Assert.assertEquals("foo4", this.logsBuffer.get(3).getAsString("sample_label"));
+    }
+
+    @Test
+    public void testExcludeLogsResponseCodeRegexMatching() throws Exception {
+        HashMap<String, String> config = new HashMap<>(DEFAULT_VALID_TEST_CONFIG);
+        config.put("excludeLogsResponseCodeRegex", "^[23][0-5][0-9]$");
+        DatadogBackendClient client = new DatadogBackendClient();
+        BackendListenerContext context = new BackendListenerContext(config);
+        client.setupTest(context);
+
+        SampleResult result1 = createDummySampleResult("foo1", "200");
+        SampleResult result2 = createDummySampleResult("foo2", "301");
+        SampleResult result3 = createDummySampleResult("foo3", "404");
+        SampleResult result4 = createDummySampleResult("foo4", "Non HTTP response code: java.net.NoRouteToHostException");
+
+        client.handleSampleResults(Arrays.asList(result1, result2, result3, result4), context);
         Assert.assertEquals(2, this.logsBuffer.size());
         Assert.assertEquals("foo3", this.logsBuffer.get(0).getAsString("sample_label"));
         Assert.assertEquals("foo4", this.logsBuffer.get(1).getAsString("sample_label"));
