@@ -5,8 +5,8 @@
 
 package org.datadog.jmeter.plugins;
 
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -14,7 +14,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import net.minidev.json.JSONObject;
 import org.apache.jmeter.config.Arguments;
@@ -175,10 +174,12 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         userMetrics.add(sampleResult);
         this.extractMetrics(sampleResult);
         if(configuration.shouldSendResultsAsLogs()) {
-            this.extractLogs(sampleResult);
-            if(logsBuffer.size() >= configuration.getLogsBatchSize()) {
-                datadogClient.submitLogs(logsBuffer, this.configuration.getCustomTags());
-                logsBuffer.clear();
+            if(!shouldExcludeSampleResultAsLogs(sampleResult)) {
+                this.extractLogs(sampleResult);
+                if (logsBuffer.size() >= configuration.getLogsBatchSize()) {
+                    datadogClient.submitLogs(logsBuffer, this.configuration.getCustomTags());
+                    logsBuffer.clear();
+                }
             }
         }
         if(configuration.shouldIncludeSubResults()) {
@@ -186,6 +187,14 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
                 this.extractData(subResult);
             }
         }
+    }
+
+    /**
+     * Called for each individual result. It checks if logs for the sample result should be excluded
+     * @param sampleResult the result
+     */
+    private boolean shouldExcludeSampleResultAsLogs(SampleResult sampleResult) {
+        return configuration.getExcludeLogsResponseCodeRegex().matcher(sampleResult.getResponseCode()).matches();
     }
 
     /**

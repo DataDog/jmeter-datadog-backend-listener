@@ -1,5 +1,9 @@
 # Changes
 
+## 0.5.0
+* [Added] Add ability to exclude sample results to be sent as logs based on response code regex
+  See [#47](https://github.com/DataDog/jmeter-datadog-backend-listener/issues/47)
+
 ## 0.4.0
 * [Changed] Set configured tags on plugin generated logs. (See [#45](https://github.com/DataDog/jmeter-datadog-backend-listener/pull/45)).
 
