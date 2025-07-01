@@ -4,8 +4,8 @@
     <servers>
         <server>
             <id>central</id>
-            <username>${env.SONATYPE_USER_TOKEN}</username>
-            <password>${env.SONATYPE_PASS_TOKEN}</password>
+            <username>${env.CENTRAL_USER_TOKEN}</username>
+            <password>${env.CENTRAL_PASS_TOKEN}</password>
         </server>
         <server>
             <id>gpg.passphrase</id>
