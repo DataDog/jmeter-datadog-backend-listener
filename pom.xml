@@ -210,6 +210,18 @@
           <version>2.22.1</version>
           <configuration>
             <trimStackTrace>false</trimStackTrace>
+            <!--
+                Fixes java.lang.reflect.InaccessibleObjectException.
+                Reference: https://stackoverflow.com/questions/68113065/mockito-inaccessible-object-exception-while-creating-a-mock-object
+            -->
+            <argLine>
+              --add-opens java.base/java.lang=ALL-UNNAMED
+              --add-opens java.base/java.util=ALL-UNNAMED
+              --add-opens java.base/java.util.concurrent=ALL-UNNAMED
+              --add-opens java.base/java.util.regex=ALL-UNNAMED
+              --add-opens java.base/java.util.function=ALL-UNNAMED
+              --add-opens java.base/java.util.stream=ALL-UNNAMED
+            </argLine>
           </configuration>
         </plugin>
         <plugin>
