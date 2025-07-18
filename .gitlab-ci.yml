@@ -5,7 +5,7 @@ stages:
 
 variables:
   REGISTRY: 486234852809.dkr.ecr.us-east-1.amazonaws.com
-  BUILDER_IMAGE: $REGISTRY/ci/jmeter-datadog-backend-listener:latest
+  BUILDER_IMAGE: $REGISTRY/ci/jmeter-datadog-backend-listener:$CI_COMMIT_SHORT_SHA
 
 deploy_to_sonatype:
   stage: deploy
@@ -74,6 +74,6 @@ rebuild_maven_image:
   image: $REGISTRY/docker:18.03.1
   when: manual
   script:
-    - docker build --tag $BUILDER_IMAGE .  # Build the Dockerfile from this directory
+    - docker build --label target=build --tag $BUILDER_IMAGE .     # Build the Dockerfile from this directory
     - docker push $BUILDER_IMAGE
   tags: [ "runner:docker" ]
