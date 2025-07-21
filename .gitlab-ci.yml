@@ -74,6 +74,6 @@ rebuild_maven_image:
   image: $REGISTRY/docker:18.03.1
   when: manual
   script:
-    - docker build --label target=build --tag $BUILDER_IMAGE .     # Build the Dockerfile from this directory
+    - docker build --label target=build --tag registry.ddbuild.io/$BUILDER_IMAGE .     # Build the Dockerfile from this directory
     - docker push $BUILDER_IMAGE
   tags: [ "runner:docker" ]
