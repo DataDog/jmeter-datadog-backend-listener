@@ -75,5 +75,5 @@ rebuild_maven_image:
   when: manual
   script:
     - docker build --label target=build --tag registry.ddbuild.io/$BUILDER_IMAGE .     # Build the Dockerfile from this directory
-    - docker push $BUILDER_IMAGE
+    - docker push registry.ddbuild.io/$BUILDER_IMAGE
   tags: [ "runner:docker" ]
