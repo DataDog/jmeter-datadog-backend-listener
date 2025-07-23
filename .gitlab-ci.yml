@@ -6,11 +6,12 @@ stages:
 variables:
   REGISTRY: 486234852809.dkr.ecr.us-east-1.amazonaws.com
   BUILDER_IMAGE: $REGISTRY/ci/jmeter-datadog-backend-listener:latest
+  BUILDER_IMAGE_REPO: registry.ddbuild.io/$BUILDER_IMAGE
 
-deploy_to_sonatype:
+deploy_to_maven_central:
   stage: deploy
   tags: [ "runner:docker" ]
-  image: $BUILDER_IMAGE
+  image: $BUILDER_IMAGE_REPO
 
   only:
     - tags
@@ -68,12 +69,12 @@ create_key:
     paths:
       - ./pubkeys/
 
-# This job makes a new Docker image of maven used for `deploy_to_sonatype` and sends it to $BUILDER_IMAGE
+# This job makes a new Docker image of maven used for `deploy_to_maven_central` and sends it to $BUILDER_IMAGE_REPO
 rebuild_maven_image:
   stage: build
   image: $REGISTRY/docker:18.03.1
   when: manual
   script:
-    - docker build --label target=build --tag registry.ddbuild.io/$BUILDER_IMAGE .     # Build the Dockerfile from this directory
-    - docker push registry.ddbuild.io/$BUILDER_IMAGE
+    - docker build --label target=build --tag $BUILDER_IMAGE_REPO .     # Build the Dockerfile from this directory
+    - docker push $BUILDER_IMAGE_REPO
   tags: [ "runner:docker" ]
