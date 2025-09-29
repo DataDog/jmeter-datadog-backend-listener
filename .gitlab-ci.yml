@@ -6,26 +6,26 @@ stages:
 variables:
   REGISTRY: 486234852809.dkr.ecr.us-east-1.amazonaws.com
   BUILDER_IMAGE: $REGISTRY/ci/jmeter-datadog-backend-listener:latest
+  BUILDER_IMAGE_REPO: registry.ddbuild.io/$BUILDER_IMAGE
 
-deploy_to_sonatype:
+deploy_to_maven_central:
   stage: deploy
   tags: [ "runner:docker" ]
-  image: $BUILDER_IMAGE
+  image: $BUILDER_IMAGE_REPO
 
   only:
     - tags
   when: manual
-
   script:
     # Ensure we don't print commands being run to the logs during credential
     # operations
     - set +eux
 
     - echo "Fetching Sonatype user..."
-    - export SONATYPE_USER=$(aws ssm get-parameter --region us-east-1 --name ci.jmeter-datadog-backend-listener.publishing.sonatype_username --with-decryption --query "Parameter.Value" --out text)
+    - export CENTRAL_USER_TOKEN=$(aws ssm get-parameter --region us-east-1 --name ci.jmeter-datadog-backend-listener.publishing.central_username_token --with-decryption --query "Parameter.Value" --out text)
 
     - echo "Fetching Sonatype password..."
-    - export SONATYPE_PASS=$(aws ssm get-parameter --region us-east-1 --name ci.jmeter-datadog-backend-listener.publishing.sonatype_password --with-decryption --query "Parameter.Value" --out text)
+    - export CENTRAL_PASS_TOKEN=$(aws ssm get-parameter --region us-east-1 --name ci.jmeter-datadog-backend-listener.publishing.central_password_token --with-decryption --query "Parameter.Value" --out text)
 
     - echo "Fetching signing key password..."
     - export GPG_PASSPHRASE=$(aws ssm get-parameter --region us-east-1 --name ci.jmeter-datadog-backend-listener.signing.gpg_passphrase --with-decryption --query "Parameter.Value" --out text)
@@ -41,8 +41,8 @@ deploy_to_sonatype:
     - echo "Cleaning up..."
 
     # unset the env variables
-    - unset SONATYPE_USER
-    - unset SONATYPE_PASS
+    - unset CENTRAL_USER_TOKEN
+    - unset CENTRAL_PASS_TOKEN
     - unset GPG_PASSPHRASE
     - unset GPG_KEY
 
@@ -69,12 +69,12 @@ create_key:
     paths:
       - ./pubkeys/
 
-# This job makes a new Docker image of maven used for `deploy_to_sonatype` and sends it to $BUILDER_IMAGE
+# This job makes a new Docker image of maven used for `deploy_to_maven_central` and sends it to $BUILDER_IMAGE_REPO
 rebuild_maven_image:
   stage: build
   image: $REGISTRY/docker:18.03.1
   when: manual
   script:
-    - docker build --tag $BUILDER_IMAGE .  # Build the Dockerfile from this directory
-    - docker push $BUILDER_IMAGE
+    - docker build --label target=build --tag $BUILDER_IMAGE_REPO .     # Build the Dockerfile from this directory
+    - docker push $BUILDER_IMAGE_REPO
   tags: [ "runner:docker" ]
