@@ -27,11 +27,12 @@ public class DatadogConfigurationTest {
     private static final String EXCLUDE_LOGS_RESPONSE_CODE_REGEX = "excludeLogsResponseCodeRegex";
     private static final String SAMPLERS_REGEX = "samplersRegex";
     private static final String CUSTOM_TAGS = "customTags";
+    private static final String STATISTICS_CALCULATION_MODE = "statisticsCalculationMode";
 
     @Test
     public void testArguments(){
         Arguments args = DatadogConfiguration.getPluginArguments();
-        Assert.assertEquals(10, args.getArgumentCount());
+        Assert.assertEquals(11, args.getArgumentCount());
 
         Map<String, String> argumentsMap = args.getArgumentsAsMap();
         Assert.assertTrue(argumentsMap.containsKey(API_URL_PARAM));
@@ -44,6 +45,7 @@ public class DatadogConfigurationTest {
         Assert.assertTrue(argumentsMap.containsKey(EXCLUDE_LOGS_RESPONSE_CODE_REGEX));
         Assert.assertTrue(argumentsMap.containsKey(SAMPLERS_REGEX));
         Assert.assertTrue(argumentsMap.containsKey(CUSTOM_TAGS));
+        Assert.assertTrue(argumentsMap.containsKey(STATISTICS_CALCULATION_MODE));
     }
 
     @Test
@@ -60,6 +62,7 @@ public class DatadogConfigurationTest {
                 put(EXCLUDE_LOGS_RESPONSE_CODE_REGEX, "");
                 put(SAMPLERS_REGEX, "false");
                 put(CUSTOM_TAGS, "key:value");
+                put(STATISTICS_CALCULATION_MODE, "aggregate_report");
             }
         };
 
@@ -74,6 +77,42 @@ public class DatadogConfigurationTest {
         Assert.assertEquals(new ArrayList<>(Arrays.asList("key:value")), datadogConfiguration.getCustomTags());
         Assert.assertTrue(datadogConfiguration.shouldSendResultsAsLogs());
         Assert.assertFalse(datadogConfiguration.shouldIncludeSubResults());
+        Assert.assertEquals(StatisticsMode.AGGREGATE_REPORT, datadogConfiguration.getStatisticsCalculationMode());
+    }
+
+    @Test(expected = DatadogConfigurationException.class)
+    public void testStatsModeInvalid() throws DatadogConfigurationException {
+        Map<String, String> config = new HashMap<String, String>() {
+            {
+                put("apiKey", "123456");
+                put(STATISTICS_CALCULATION_MODE, "bogus");
+            }
+        };
+        DatadogConfiguration.parseConfiguration(new BackendListenerContext(config));
+    }
+
+    @Test
+    public void testStatsModeDdsketch() throws DatadogConfigurationException {
+        Map<String, String> config = new HashMap<String, String>() {
+            {
+                put("apiKey", "123456");
+                put(STATISTICS_CALCULATION_MODE, "ddsketch");
+            }
+        };
+        DatadogConfiguration datadogConfiguration = DatadogConfiguration.parseConfiguration(new BackendListenerContext(config));
+        Assert.assertEquals(StatisticsMode.DDSKETCH, datadogConfiguration.getStatisticsCalculationMode());
+    }
+
+    @Test
+    public void testStatsModeDashboard() throws DatadogConfigurationException {
+        Map<String, String> config = new HashMap<String, String>() {
+            {
+                put("apiKey", "123456");
+                put(STATISTICS_CALCULATION_MODE, "dashboard");
+            }
+        };
+        DatadogConfiguration datadogConfiguration = DatadogConfiguration.parseConfiguration(new BackendListenerContext(config));
+        Assert.assertEquals(StatisticsMode.DASHBOARD, datadogConfiguration.getStatisticsCalculationMode());
     }
 
     @Test(expected = DatadogConfigurationException.class)
@@ -83,7 +122,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test
-    public void testApiKeyIsTheOnlyRequiredParam() throws DatadogConfigurationException {
+    public void testApiKeyOnlyRequired() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -93,7 +132,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test(expected = DatadogConfigurationException.class)
-    public void testMetricsBatchSizeNotInt() throws DatadogConfigurationException {
+    public void testMetricsBatchSizeInvalid() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -104,7 +143,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test(expected = DatadogConfigurationException.class)
-    public void testLogsBatchSizeNotInt() throws DatadogConfigurationException {
+    public void testLogsBatchSizeInvalid() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -115,7 +154,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test(expected = DatadogConfigurationException.class)
-    public void testSendResultsAsLogsNotBoolean() throws DatadogConfigurationException {
+    public void testSendResultsAsLogsInvalid() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -126,7 +165,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test(expected = DatadogConfigurationException.class)
-    public void testIncludeSubresultsNotBoolean() throws DatadogConfigurationException {
+    public void testIncludeSubresultsInvalid() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -137,7 +176,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test(expected = PatternSyntaxException.class)
-    public void testInvalidExcludeLogsResponseCodeRegex() throws DatadogConfigurationException {
+    public void testExcludeLogsResponseCodeRegexInvalid() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -148,7 +187,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test
-    public void testValidExcludeLogsResponseCodeRegex() throws DatadogConfigurationException {
+    public void testExcludeLogsResponseCodeRegexValid() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -159,7 +198,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test(expected = PatternSyntaxException.class)
-    public void testInvalidSamplersRegex() throws DatadogConfigurationException {
+    public void testSamplersRegexInvalid() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -170,7 +209,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test
-    public void testValidSamplersRegex() throws DatadogConfigurationException {
+    public void testSamplersRegexValid() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -181,7 +220,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test
-    public void testNoValueProvidedForCustomTags() throws DatadogConfigurationException {
+    public void testCustomTagsEmpty() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -192,7 +231,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test
-    public void testOnlyKeyForCustomTags() throws DatadogConfigurationException {
+    public void testCustomTagsKeyOnly() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -203,7 +242,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test
-    public void testSpecialCharacterForCustomTags() throws DatadogConfigurationException {
+    public void testCustomTagsSpecialChar() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");

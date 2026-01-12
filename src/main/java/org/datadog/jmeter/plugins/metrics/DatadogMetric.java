@@ -5,12 +5,14 @@
 
 package org.datadog.jmeter.plugins.metrics;
 
+import java.util.List;
+
 public class DatadogMetric {
     private DatadogMetricContext context;
     private String type;
     private double value;
 
-    public DatadogMetric(String name, String type, double value, String[] tags) {
+    public DatadogMetric(String name, String type, double value, List<String> tags) {
         this.context = new DatadogMetricContext(name, tags);
         this.type = type;
         this.value = value;
@@ -20,7 +22,7 @@ public class DatadogMetric {
         return this.context.getName();
     }
 
-    public String[] getTags() {
+    public List<String> getTags() {
         return this.context.getTags();
     }
 

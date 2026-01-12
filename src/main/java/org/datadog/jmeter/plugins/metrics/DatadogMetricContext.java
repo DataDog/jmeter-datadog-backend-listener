@@ -5,25 +5,38 @@
 
 package org.datadog.jmeter.plugins.metrics;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
+/**
+ * Immutable context for aggregating Datadog metrics.
+ * Tags are defensively copied and wrapped as unmodifiable at construction.
+ */
 public class DatadogMetricContext {
-    private String name;
-    private String[] tags;
+    private final String name;
+    private final List<String> tags;
 
-    public DatadogMetricContext(String name, String[] tags){
+    /**
+     * Creates a new metric context.
+     * @param name Metric name
+     * @param tags List of tags
+     */
+    public DatadogMetricContext(String name, List<String> tags){
         this.name = name;
-        this.tags = tags;
+        this.tags = Collections.unmodifiableList(new ArrayList<>(tags));
     }
 
     public String getName() {
         return name;
     }
 
-    public String[] getTags() {
+    /**
+     * Returns the immutable list of tags.
+     */
+    public List<String> getTags() {
         return tags;
     }
-
 
     @Override
     public boolean equals(Object obj) {
@@ -31,8 +44,7 @@ public class DatadogMetricContext {
         if (obj == null || getClass() != obj.getClass()) return false;
         DatadogMetricContext context = (DatadogMetricContext) obj;
         if (!context.name.equals(this.name)) return false;
-
-        return Arrays.equals(context.tags, this.tags);
+        return tags.equals(context.tags);
     }
 
     @Override
@@ -40,7 +52,7 @@ public class DatadogMetricContext {
         int prime = 31;
         int result = 1;
         result = prime * result + ((name == null) ? 0 : name.hashCode());
-        result = prime * result + ((tags == null) ? 0 : Arrays.hashCode(tags));
+        result = prime * result + ((tags == null) ? 0 : tags.hashCode());
         return result;
     }
 }

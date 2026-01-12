@@ -1,5 +1,11 @@
 # Changes
 
+## 0.6.0
+* [Added] Add cumulative metrics support to mirror JMeter's Aggregate Report.
+* [Added] Add `statisticsCalculationMode` configuration option to control percentile calculation algorithms (`ddsketch`, `aggregate_report`, `dashboard`).
+* [Added] Add assertion metrics to track success and failure of assertions.
+* [Added] Add Datadog Events for test start and test end.
+
 ## 0.5.0
 * [Added] Add ability to exclude sample results to be sent as logs based on response code regex
   See [#47](https://github.com/DataDog/jmeter-datadog-backend-listener/issues/47)

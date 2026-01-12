@@ -6,6 +6,8 @@
 package org.datadog.jmeter.plugins;
 
 import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
@@ -30,6 +32,7 @@ public class DatadogHttpClient {
     private static final Logger logger = LoggerFactory.getLogger(DatadogHttpClient.class);
     private static final String METRIC = "v1/series";
     private static final String VALIDATE = "v1/validate";
+    private static final String EVENTS = "v1/events";
     private String apiUrl = null;
     private String logIntakeUrl = null;
     private static final int timeoutMS = 60 * 1000;
@@ -63,23 +66,20 @@ public class DatadogHttpClient {
             conn.setConnectTimeout(timeoutMS);
             conn.setReadTimeout(timeoutMS);
             conn.setRequestMethod("GET");
-
-            BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
-            StringBuilder result = new StringBuilder();
-            String line;
-            while ((line = rd.readLine()) != null) {
-                result.append(line);
-            }
-            rd.close();
+            String result = readResponse(conn);
             if (conn.getResponseCode() != 200) {
                 logger.error("Invalid api key");
-                logger.debug("The api endpoint returned: " + result.toString());
+                logger.debug("The api endpoint returned: " + result);
                 return false;
             }
             return true;
         } catch (Exception e){
             logger.error(e.getLocalizedMessage());
             return false;
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
     }
 
@@ -101,7 +101,7 @@ public class DatadogHttpClient {
             points.add(point);
 
             JSONArray tags = new JSONArray();
-            tags.addAll(Arrays.asList(datadogMetric.getTags()));
+            tags.addAll(datadogMetric.getTags());
 
             JSONObject metric = new JSONObject();
             metric.put("metric", datadogMetric.getName());
@@ -126,21 +126,13 @@ public class DatadogHttpClient {
             conn.setDoInput(true);
             conn.setDoOutput(true);
 
-            OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream(), StandardCharsets.UTF_8);
-            logger.debug("Writing to OutputStreamWriter...");
-            wr.write(payload.toString());
-            wr.close();
-
-            // Get response
-            BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
-            StringBuilder result = new StringBuilder();
-            String line;
-            while ((line = rd.readLine()) != null) {
-                result.append(line);
+            try (OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream(), StandardCharsets.UTF_8)) {
+                logger.debug("Writing to OutputStreamWriter...");
+                wr.write(payload.toString());
             }
-            rd.close();
 
-            JSONObject json = (JSONObject) new JSONParser(JSONParser.MODE_PERMISSIVE).parse(result.toString());
+            String result = readResponse(conn);
+            JSONObject json = (JSONObject) new JSONParser(JSONParser.MODE_PERMISSIVE).parse(result);
             if ("ok".equals(json.getAsString("status"))) {
                 logger.info(String.format("'%s' metrics were sent to Datadog", datadogMetrics.size()));
                 logger.debug(String.format("Payload: %s", payload));
@@ -150,6 +142,10 @@ public class DatadogHttpClient {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
     }
 
@@ -162,7 +158,7 @@ public class DatadogHttpClient {
         JSONArray logsArray = new JSONArray();
         logsArray.addAll(payload);
 
-        HttpURLConnection conn;
+        HttpURLConnection conn = null;
         try {
             URL url = new URL(buildLogsUrl(this.logIntakeUrl, tags));
             conn = (HttpURLConnection) url.openConnection();
@@ -174,26 +170,22 @@ public class DatadogHttpClient {
             conn.setDoInput(true);
             conn.setDoOutput(true);
 
-            OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream(), StandardCharsets.UTF_8);
-            wr.write(logsArray.toString());
-            wr.close();
-
-            // Get response
-            BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
-            StringBuilder result = new StringBuilder();
-            String line;
-            while ((line = rd.readLine()) != null) {
-                result.append(line);
+            try (OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream(), StandardCharsets.UTF_8)) {
+                wr.write(logsArray.toString());
             }
-            rd.close();
 
-            if ("{}".equals(result.toString())) {
+            String result = readResponse(conn);
+            if ("{}".equals(result)) {
                 logger.info(String.format("Sent '%s' logs to Datadog", payload.size()));
             } else {
                 logger.error(String.format("Unable to send '%s' logs to Datadog", payload.size()));
             }
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
     }
 
@@ -204,5 +196,75 @@ public class DatadogHttpClient {
         return new URIBuilder(logsUrl)
             .addParameter("ddtags", String.join(",", tags))
             .toString();
+    }
+
+    /**
+     * Submit event.
+     *
+     * @param title the event title
+     * @param text the event text
+     * @param alertType the alert type
+     * @param aggregationKey the aggregation key
+     * @param tags the event tags
+     * @param sourceTypeName the source type name
+     */
+    public void submitEvent(String title, String text, String alertType, String aggregationKey, List<String> tags, String sourceTypeName) {
+        JSONObject payload = new JSONObject();
+        payload.put("title", title);
+        payload.put("text", text);
+        payload.put("alert_type", alertType);
+        payload.put("aggregation_key", aggregationKey);
+        payload.put("source_type_name", sourceTypeName);
+        payload.put("priority", "normal");
+        
+        if (tags != null && !tags.isEmpty()) {
+            JSONArray tagsArray = new JSONArray();
+            tagsArray.addAll(tags);
+            payload.put("tags", tagsArray);
+        }
+
+        String urlParameters = "?api_key=" + this.apiKey;
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(this.apiUrl + EVENTS + urlParameters);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setConnectTimeout(timeoutMS);
+            conn.setReadTimeout(timeoutMS);
+            conn.setUseCaches(false);
+            conn.setDoInput(true);
+            conn.setDoOutput(true);
+
+            try (OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream(), StandardCharsets.UTF_8)) {
+                wr.write(payload.toString());
+            }
+
+            String result = readResponse(conn);
+            JSONObject json = (JSONObject) new JSONParser(JSONParser.MODE_PERMISSIVE).parse(result);
+            if ("ok".equals(json.getAsString("status"))) {
+                logger.info("Event '" + title + "' sent to Datadog");
+            } else {
+                logger.error("Unable to send event '" + title + "' to Datadog!");
+            }
+        } catch (Exception e) {
+            logger.error("Failed to submit event to Datadog: " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+    
+    private String readResponse(HttpURLConnection conn) throws IOException {
+        InputStream inputStream = conn.getErrorStream() != null ? conn.getErrorStream() : conn.getInputStream();
+        StringBuilder result = new StringBuilder();
+        try (BufferedReader rd = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = rd.readLine()) != null) {
+                result.append(line);
+            }
+        }
+        return result.toString();
     }
 }

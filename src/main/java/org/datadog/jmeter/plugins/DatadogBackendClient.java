@@ -5,17 +5,25 @@
 
 package org.datadog.jmeter.plugins;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryUsage;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import net.minidev.json.JSONObject;
+import org.apache.jmeter.assertions.AssertionResult;
 import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.protocol.http.sampler.HTTPSampleResult;
 import org.apache.jmeter.samplers.SampleResult;
@@ -23,9 +31,13 @@ import org.apache.jmeter.util.JMeterUtils;
 import org.apache.jmeter.visualizers.backend.AbstractBackendListenerClient;
 import org.apache.jmeter.visualizers.backend.BackendListenerContext;
 import org.apache.jmeter.visualizers.backend.UserMetric;
-import org.datadog.jmeter.plugins.aggregation.ConcurrentAggregator;
+import org.datadog.jmeter.plugins.aggregation.CumulativeAggregator;
+import org.datadog.jmeter.plugins.aggregation.IntervalAggregator;
+import org.datadog.jmeter.plugins.aggregation.DDSketchStatsCollector;
+import org.datadog.jmeter.plugins.aggregation.DashboardCompatibleStatsCollector;
+import org.datadog.jmeter.plugins.aggregation.JmeterCompatibleStatsCollector;
+import org.datadog.jmeter.plugins.aggregation.StatsCollector;
 import org.datadog.jmeter.plugins.exceptions.DatadogApiException;
-import org.datadog.jmeter.plugins.exceptions.DatadogConfigurationException;
 import org.datadog.jmeter.plugins.metrics.DatadogMetric;
 import org.datadog.jmeter.plugins.util.CommonUtils;
 import org.slf4j.Logger;
@@ -56,29 +68,43 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     private DatadogConfiguration configuration;
 
     /**
-     * An instance of {@link ConcurrentAggregator}.
-     * Instantiated upon creation of the DatadogBackendClient class. Aggregates metrics until instructed to flush.
-     * Flushing occurs at a fixed schedule rate, @see {@link #timerHandle} and {@link #METRICS_SEND_INTERVAL}.
+     * Base custom tags extended with runner identity (if available).
      */
-    private ConcurrentAggregator aggregator = new ConcurrentAggregator();
+    private List<String> customTagsWithRunner = new ArrayList<>();
+
 
     /**
-     * An list of JSON log payloads to buffer calls to the Datadog API. Unlike metrics, logs are not aggregated before being sent. Thus
+     * An instance of {@link IntervalAggregator}.
+     * Instantiated upon creation of the DatadogBackendClient class. Aggregates metrics, flushes them and resets them at every interval.
+     * Flushing occurs at a fixed schedule rate, @see {@link #timerHandle} and {@link #METRICS_SEND_INTERVAL_SECONDS}.
+     */
+    private IntervalAggregator intervalAggregator;
+
+    /**
+     * Cumulative aggregator for computing cumulative metrics per label and total.
+     * These metrics are sent periodically during the test and at the end. The metrics are only reset at the end of the test.
+     */
+    private CumulativeAggregator cumulativeAggregator;
+
+    /**
+     * A list of JSON log payloads to buffer calls to the Datadog API. Unlike metrics, logs are not aggregated before being sent. Thus
      * flushing of logs doesn't occur at a fixed time interval but rather once the buffer is bigger than {@link DatadogConfiguration#getLogsBatchSize()}.
      */
     private List<JSONObject> logsBuffer = new ArrayList<>();
 
 
     /**
-     * How often to send metrics. During this interval metrics are aggregated (i.e multiple counts values are added together, gauge
+     * How often to send metrics (in seconds). During this interval metrics are aggregated (i.e multiple counts values are added together, gauge
      * replaces the previous value etc.). At the end of that interval the result of aggregation is sent to Datadog.
      */
-    private static final long METRICS_SEND_INTERVAL = JMeterUtils.getPropDefault("datadog.send_interval", 10);
+    private static final long METRICS_SEND_INTERVAL_SECONDS = JMeterUtils.getPropDefault("datadog.send_interval", 10);
 
     /**
-     * Used to schedule flushing of metrics every {@link #METRICS_SEND_INTERVAL} seconds.
+     * Used to schedule flushing of metrics every {@link #METRICS_SEND_INTERVAL_SECONDS} seconds.
      */
     private ScheduledExecutorService scheduler;
+
+    private long testStartTimestamp;
 
     /**
      * The resulting future object after scheduling. Keeping the reference as an instance variable to be able to cancel it.
@@ -105,22 +131,66 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     /**
      * Called before starting the test.
      * @param context An object used to fetch user configuration.
-     * @throws DatadogConfigurationException If the configuration is invalid.
-     * @throws DatadogApiException If the plugin can't connect to Datadog.
+     * @throws Exception If the configuration is invalid or the plugin can't connect to Datadog.
      */
     @Override
     public void setupTest(BackendListenerContext context) throws Exception {
         this.configuration = DatadogConfiguration.parseConfiguration(context);
+        this.testStartTimestamp = System.currentTimeMillis();
+        initializeRunnerTags();
 
         datadogClient = new DatadogHttpClient(configuration.getApiKey(), configuration.getApiUrl(), configuration.getLogIntakeUrl());
+
         boolean valid = datadogClient.validateConnection();
         if(!valid) {
             throw new DatadogApiException("Invalid apiKey");
         }
 
         scheduler = Executors.newScheduledThreadPool(1);
-        this.timerHandle = scheduler.scheduleAtFixedRate(this, METRICS_SEND_INTERVAL, METRICS_SEND_INTERVAL, TimeUnit.SECONDS);
+        this.timerHandle = scheduler.scheduleAtFixedRate(this, METRICS_SEND_INTERVAL_SECONDS, METRICS_SEND_INTERVAL_SECONDS, TimeUnit.SECONDS);
+
+        // Choose StatsCollector implementation based on configuration
+        Supplier<StatsCollector> statsFactory;
+        boolean countSubsamplesAsSingle;
+        switch (configuration.getStatisticsCalculationMode()) {
+            case DDSKETCH:
+                statsFactory = DDSketchStatsCollector::new;
+                countSubsamplesAsSingle = false;
+                break;
+            case DASHBOARD:
+                statsFactory = DashboardCompatibleStatsCollector::new;
+                countSubsamplesAsSingle = true;
+                break;
+            case AGGREGATE_REPORT:
+                statsFactory = JmeterCompatibleStatsCollector::new;
+                countSubsamplesAsSingle = false;
+                break;
+            default:
+                throw new IllegalStateException("Unknown statistics mode: " + configuration.getStatisticsCalculationMode());
+        }
+
+        this.intervalAggregator = new IntervalAggregator(statsFactory);
+        this.cumulativeAggregator = new CumulativeAggregator(statsFactory, countSubsamplesAsSingle);
+        
+        submitIntegrationEvent("JMeter Test Started", "info");
+        
         super.setupTest(context);
+    }
+
+    /**
+     * Main entry point, this method is called when new results are computed.
+     * @param list The results to parse.
+     * @param backendListenerContext unused - An object used to fetch user configuration.
+     */
+    @Override
+    public void handleSampleResults(List<SampleResult> list, BackendListenerContext backendListenerContext) {
+        for (SampleResult sampleResult : list) {
+            Matcher matcher = configuration.getSamplersRegex().matcher(sampleResult.getSampleLabel());
+            if(!matcher.find()) {
+                continue;
+            }
+            this.extractData(sampleResult);
+        }
     }
 
     /**
@@ -141,47 +211,126 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
 
         this.sendMetrics();
 
+        submitIntegrationEvent("JMeter Test Ended", "success");
+
+        if (this.cumulativeAggregator != null) {
+            List<DatadogMetric> finalMetrics = this.cumulativeAggregator.buildMetrics(
+                CommonUtils.combineTags(this.customTagsWithRunner,
+                    "statistics_mode:" + configuration.getStatisticsCalculationMode().getValue(),
+                    "final_result:true")
+            );
+
+            // Add final_result metrics (emitted only at test end, without final_result tag)
+            List<DatadogMetric> finalResultMetrics = this.cumulativeAggregator.buildFinalMetrics(
+                CommonUtils.combineTags(this.customTagsWithRunner,
+                    "statistics_mode:" + configuration.getStatisticsCalculationMode().getValue())
+            );
+            finalMetrics.addAll(finalResultMetrics);
+
+            if (log.isInfoEnabled()) {
+                log.info("Sending {} final aggregate metrics to Datadog", finalMetrics.size());
+                for (DatadogMetric m : finalMetrics) {
+                    log.info("  METRIC: {} = {} [tags: {}]", m.getName(), m.getValue(), String.join(", ", m.getTags()));
+                }
+            }
+
+            AtomicInteger counterFinal = new AtomicInteger();
+            finalMetrics.stream().collect(Collectors.groupingBy(it -> counterFinal.getAndIncrement() / configuration.getMetricsMaxBatchSize())).values().forEach(
+                    x -> datadogClient.submitMetrics(x)
+            );
+        }
+
         if (this.logsBuffer.size() > 0) {
-            this.datadogClient.submitLogs(this.logsBuffer, this.configuration.getCustomTags());
+            this.datadogClient.submitLogs(this.logsBuffer, this.customTagsWithRunner);
             this.logsBuffer.clear();
         }
         this.datadogClient = null;
         super.teardownTest(context);
     }
 
+    private void initializeRunnerTags() {
+        // Use the distributed prefix (thread-group prefix) when available.
+        // JMeter sets this in distributed mode as "host:port" (or sometimes host-only).
+        String distributedPrefix = JMeterUtils.getPropDefault(
+            JMeterUtils.THREAD_GROUP_DISTRIBUTED_PREFIX_PROPERTY_NAME, "");
+
+        String runnerHost = JMeterUtils.getLocalHostName();
+        String runnerMode = distributedPrefix.isEmpty() ? "local" : "distributed";
+
+        customTagsWithRunner = new ArrayList<>(configuration.getCustomTags());
+        
+        // Auto-generate test_run_id if not provided by user
+        addTagIfMissing(customTagsWithRunner, "test_run_id", generateTestRunId(distributedPrefix, runnerHost));
+        
+        // Add raw distributed prefix if present
+        if (!distributedPrefix.isEmpty()) {
+            addTagIfMissing(customTagsWithRunner, "runner_id", distributedPrefix);
+        }
+
+        addTagIfMissing(customTagsWithRunner, "runner_host", runnerHost);
+        addTagIfMissing(customTagsWithRunner, "runner_mode", runnerMode);
+        addTagIfMissing(customTagsWithRunner, "runner_host_ip", JMeterUtils.getLocalHostIP());
+        addTagIfMissing(customTagsWithRunner, "runner_host_fqdn", JMeterUtils.getLocalHostFullName());
+        addTagIfMissing(customTagsWithRunner, "jmeter_version", JMeterUtils.getJMeterVersion());
+    }
+
     /**
-     * Main entry point, this method is called when new results are computed.
-     * @param list The results to parse.
-     * @param backendListenerContext unused - An object used to fetch user configuration.
+     * Generate a unique test run ID using runner/host prefix and timestamp.
+     * Format: {prefix}-{ISO-8601 timestamp}-{random8chars}
+     * Example: myhost-2026-01-24T14:30:25Z-a1b2c3d4
+     *
+     * @param runnerId The distributed runner ID, if available
+     * @param hostname The hostname to use when runner ID is absent
+     * @return A raw (unsanitized) test run ID - caller should use sanitizeTagPair
      */
-    @Override
-    public void handleSampleResults(List<SampleResult> list, BackendListenerContext backendListenerContext) {
-        for (SampleResult sampleResult : list) {
-            Matcher matcher = configuration.getSamplersRegex().matcher(sampleResult.getSampleLabel());
-            if(!matcher.find()) {
-                continue;
-            }
-            this.extractData(sampleResult);
+    private String generateTestRunId(String runnerId, String hostname) {
+        String prefix = runnerId == null || runnerId.isEmpty() ? hostname : runnerId;
+
+        // Generate timestamp in ISO-8601 format (UTC)
+        DateTimeFormatter formatter = DateTimeFormatter.ISO_INSTANT;
+        String timestamp = formatter.format(Instant.now().truncatedTo(ChronoUnit.SECONDS));
+        
+        // Add random suffix for uniqueness
+        String randomSuffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        
+        return prefix + "-" + timestamp + "-" + randomSuffix;
+    }
+
+    /**
+     * Add a sanitized tag to the list if a tag with the same key doesn't already exist.
+     * @param tags the tag list to add to
+     * @param key the tag key (without colon)
+     * @param value the tag value (will be sanitized)
+     */
+    private void addTagIfMissing(List<String> tags, String key, String value) {
+        String keyPrefix = key + ":";
+        boolean alreadyTagged = tags.stream().anyMatch(existing -> existing.startsWith(keyPrefix));
+        if (!alreadyTagged) {
+            tags.add(CommonUtils.sanitizeTagPair(key, value));
         }
     }
 
     /**
-     * Called for each individual result. It calls {@link #extractMetrics(SampleResult)} and {@link #extractLogs(SampleResult)}.
+     * Called for each individual result. It calls {@link #extractIntervalMetrics(SampleResult)} and {@link #extractLogs(SampleResult)}.
      * @param sampleResult the result
      */
     private void extractData(SampleResult sampleResult) {
         UserMetric userMetrics = this.getUserMetrics();
         userMetrics.add(sampleResult);
-        this.extractMetrics(sampleResult);
-        if(configuration.shouldSendResultsAsLogs()) {
-            if(!shouldExcludeSampleResultAsLogs(sampleResult)) {
-                this.extractLogs(sampleResult);
-                if (logsBuffer.size() >= configuration.getLogsBatchSize()) {
-                    datadogClient.submitLogs(logsBuffer, this.configuration.getCustomTags());
-                    logsBuffer.clear();
-                }
+
+        this.cumulativeAggregator.addSample(sampleResult);
+
+        this.extractIntervalMetrics(sampleResult);
+
+        if(configuration.shouldSendResultsAsLogs() && !shouldExcludeSampleResultAsLogs(sampleResult)) {
+            this.extractLogs(sampleResult);
+
+            if (logsBuffer.size() >= configuration.getLogsBatchSize()) {
+                datadogClient.submitLogs(logsBuffer, this.customTagsWithRunner);
+                logsBuffer.clear();
             }
         }
+
         if(configuration.shouldIncludeSubResults()) {
             for (SampleResult subResult : sampleResult.getSubResults()) {
                 this.extractData(subResult);
@@ -198,28 +347,65 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     }
 
     /**
-     * Called for each individual result. It extracts metrics and give them to the {@link ConcurrentAggregator} instance for aggregation.
+     * Called for each individual result. It extracts metrics and give them to the {@link IntervalAggregator} instance for aggregation.
      * @param sampleResult the result
      */
-    private void extractMetrics(SampleResult sampleResult) {
+    private void extractIntervalMetrics(SampleResult sampleResult) {
         String resultStatus = sampleResult.isSuccessful() ? "ok" : "ko";
 
         String threadGroup = CommonUtils.parseThreadGroup(sampleResult.getThreadName());
 
-        List<String> allTags = new ArrayList<>(Arrays.asList("response_code:" + sampleResult.getResponseCode(), "sample_label:" + sampleResult.getSampleLabel(), "thread_group:" + threadGroup, "result:" + resultStatus));
-        allTags.addAll(this.configuration.getCustomTags());
-        String[] tags = allTags.toArray(new String[allTags.size()]);
+        List<String> allTags = CommonUtils.combineTags(this.customTagsWithRunner,
+            CommonUtils.sanitizeTagPair("response_code", sampleResult.getResponseCode()),
+            CommonUtils.sanitizeTagPair("sample_label", sampleResult.getSampleLabel()),
+            CommonUtils.sanitizeTagPair("thread_group", threadGroup),
+            "result:" + resultStatus,
+            "statistics_mode:" + configuration.getStatisticsCalculationMode().getValue()
+        );
 
         if(sampleResult.isSuccessful()) {
-            aggregator.incrementCounter("jmeter.responses_count", tags, sampleResult.getSampleCount() - sampleResult.getErrorCount());
+            intervalAggregator.incrementCounter("jmeter.responses_count", allTags, sampleResult.getSampleCount() - sampleResult.getErrorCount());
         } else {
-            aggregator.incrementCounter("jmeter.responses_count", tags, sampleResult.getErrorCount());
+            intervalAggregator.incrementCounter("jmeter.responses_count", allTags, sampleResult.getErrorCount());
         }
 
-        aggregator.histogram("jmeter.response_time", tags, sampleResult.getTime() / 1000f);
-        aggregator.histogram("jmeter.bytes_sent", tags, sampleResult.getSentBytes());
-        aggregator.histogram("jmeter.bytes_received", tags, sampleResult.getBytesAsLong());
-        aggregator.histogram("jmeter.latency", tags, sampleResult.getLatency() / 1000f);
+        intervalAggregator.histogram("jmeter.response_time", allTags, sampleResult.getTime() / 1000f);
+        intervalAggregator.histogram("jmeter.bytes_sent", allTags, sampleResult.getSentBytes());
+        intervalAggregator.incrementCounter("jmeter.bytes_sent.total", allTags, sampleResult.getSentBytes());
+        intervalAggregator.histogram("jmeter.bytes_received", allTags, sampleResult.getBytesAsLong());
+        intervalAggregator.incrementCounter("jmeter.bytes_received.total", allTags, sampleResult.getBytesAsLong());
+        intervalAggregator.histogram("jmeter.latency", allTags, sampleResult.getLatency() / 1000f);
+
+        extractAssertionMetrics(sampleResult, threadGroup);
+    }
+
+    /**
+     * Extracts assertion metrics from a sample result and adds them to the interval aggregator.
+     * @param sampleResult the sample result containing assertions
+     * @param threadGroup the thread group name
+     */
+    private void extractAssertionMetrics(SampleResult sampleResult, String threadGroup) {
+        AssertionResult[] assertions = sampleResult.getAssertionResults();
+        for (AssertionResult assertion : assertions) {
+            String assertionName = assertion.getName();
+            if (assertionName == null || assertionName.isEmpty()) {
+                assertionName = "unnamed";
+            }
+            
+            List<String> assertionTags = CommonUtils.combineTags(this.customTagsWithRunner,
+                CommonUtils.sanitizeTagPair("assertion_name", assertionName),
+                CommonUtils.sanitizeTagPair("sample_label", sampleResult.getSampleLabel()),
+                CommonUtils.sanitizeTagPair("thread_group", threadGroup),
+                "statistics_mode:" + configuration.getStatisticsCalculationMode().getValue()
+            );
+
+            intervalAggregator.incrementCounter("jmeter.assertions.count", assertionTags, 1);
+            if (assertion.isFailure()) {
+                intervalAggregator.incrementCounter("jmeter.assertions.failed", assertionTags, 1);
+            } else if (assertion.isError()) {
+                intervalAggregator.incrementCounter("jmeter.assertions.error", assertionTags, 1);
+            }
+        }
     }
 
     /**
@@ -267,18 +453,30 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     }
 
     /**
-     * Computes thread related metrics and collects the aggregator.
+     * Computes thread related metrics and adds them to the aggregator.
      */
     public void addGlobalMetrics() {
         UserMetric userMetrics = getUserMetrics();
-        List<String> allTags = this.configuration.getCustomTags();
-        String[] tags = allTags.toArray(new String[allTags.size()]);
+        List<String> allTags = CommonUtils.combineTags(this.customTagsWithRunner,
+            "statistics_mode:" + configuration.getStatisticsCalculationMode().getValue()
+        );
 
-        aggregator.addGauge("jmeter.active_threads.min", tags, userMetrics.getMinActiveThreads());
-        aggregator.addGauge("jmeter.active_threads.max", tags, userMetrics.getMaxActiveThreads());
-        aggregator.addGauge("jmeter.active_threads.avg", tags, userMetrics.getMeanActiveThreads());
-        aggregator.addGauge("jmeter.threads.finished", tags, userMetrics.getFinishedThreads());
-        aggregator.addGauge("jmeter.threads.started", tags, userMetrics.getStartedThreads());
+        intervalAggregator.addGauge("jmeter.active_threads.min", allTags, userMetrics.getMinActiveThreads());
+        intervalAggregator.addGauge("jmeter.active_threads.max", allTags, userMetrics.getMaxActiveThreads());
+        intervalAggregator.addGauge("jmeter.active_threads.avg", allTags, userMetrics.getMeanActiveThreads());
+        intervalAggregator.addGauge("jmeter.threads.finished", allTags, userMetrics.getFinishedThreads());
+        intervalAggregator.addGauge("jmeter.threads.started", allTags, userMetrics.getStartedThreads());
+
+        // JVM Memory metrics
+        MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
+        MemoryUsage heapUsage = memoryMXBean.getHeapMemoryUsage();
+        MemoryUsage nonHeapUsage = memoryMXBean.getNonHeapMemoryUsage();
+
+        intervalAggregator.addGauge("jmeter.jvm.memory.heap.used", allTags, heapUsage.getUsed());
+        intervalAggregator.addGauge("jmeter.jvm.memory.heap.committed", allTags, heapUsage.getCommitted());
+        intervalAggregator.addGauge("jmeter.jvm.memory.heap.max", allTags, heapUsage.getMax());
+        intervalAggregator.addGauge("jmeter.jvm.memory.non_heap.used", allTags, nonHeapUsage.getUsed());
+        intervalAggregator.addGauge("jmeter.jvm.memory.non_heap.committed", allTags, nonHeapUsage.getCommitted());
     }
 
     /**
@@ -287,11 +485,34 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
     private void sendMetrics() {
         this.addGlobalMetrics();
 
-        List<DatadogMetric> metrics = aggregator.flushMetrics();
+        List<DatadogMetric> metrics = intervalAggregator.flushMetrics();
+
+        // Add cumulative metrics (cumulative, without reset)
+        if (this.cumulativeAggregator != null) {
+            List<DatadogMetric> cumulativeMetrics = this.cumulativeAggregator.buildMetrics(
+                CommonUtils.combineTags(this.customTagsWithRunner,
+                    "statistics_mode:" + configuration.getStatisticsCalculationMode().getValue(),
+                    "final_result:false")
+            );
+            metrics.addAll(cumulativeMetrics);
+        }
 
         AtomicInteger counter = new AtomicInteger();
         metrics.stream().collect(Collectors.groupingBy(it -> counter.getAndIncrement() / configuration.getMetricsMaxBatchSize())).values().forEach(
                 x -> datadogClient.submitMetrics(x)
+        );
+    }
+
+    private void submitIntegrationEvent(String title, String alertType) {
+        String alertString = alertType.equals("info") ? "info" : "success";
+        String text = "JMeter test plan " + alertString + " on " + JMeterUtils.getLocalHostName();
+        datadogClient.submitEvent(
+            title,
+            text,
+            alertType,
+            "jmeter_test_" + this.testStartTimestamp,
+            this.customTagsWithRunner,
+            "JMeter"
         );
     }
 }
