@@ -249,19 +249,6 @@ public class DatadogBackendClientTest
             boolean found = globalMetrics.stream().anyMatch(m -> m.getName().equals(expectedMetricName));
             Assert.assertTrue("Expected metric " + expectedMetricName + " not found", found);
         }
-
-        // Verify JVM memory metrics are present (values are dynamic, so just check presence)
-        String[] expectedJvmMetrics = {
-            "jmeter.jvm.memory.heap.used",
-            "jmeter.jvm.memory.heap.committed",
-            "jmeter.jvm.memory.heap.max",
-            "jmeter.jvm.memory.non_heap.used",
-            "jmeter.jvm.memory.non_heap.committed"
-        };
-        for (String jvmMetricName : expectedJvmMetrics) {
-            boolean found = globalMetrics.stream().anyMatch(m -> m.getName().equals(jvmMetricName));
-            Assert.assertTrue("Expected JVM metric " + jvmMetricName + " not found", found);
-        }
     }
 
     @Test

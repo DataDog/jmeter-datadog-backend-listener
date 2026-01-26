@@ -5,9 +5,6 @@
 
 package org.datadog.jmeter.plugins;
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
-import java.lang.management.MemoryUsage;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -466,17 +463,6 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         intervalAggregator.addGauge("jmeter.active_threads.avg", allTags, userMetrics.getMeanActiveThreads());
         intervalAggregator.addGauge("jmeter.threads.finished", allTags, userMetrics.getFinishedThreads());
         intervalAggregator.addGauge("jmeter.threads.started", allTags, userMetrics.getStartedThreads());
-
-        // JVM Memory metrics
-        MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
-        MemoryUsage heapUsage = memoryMXBean.getHeapMemoryUsage();
-        MemoryUsage nonHeapUsage = memoryMXBean.getNonHeapMemoryUsage();
-
-        intervalAggregator.addGauge("jmeter.jvm.memory.heap.used", allTags, heapUsage.getUsed());
-        intervalAggregator.addGauge("jmeter.jvm.memory.heap.committed", allTags, heapUsage.getCommitted());
-        intervalAggregator.addGauge("jmeter.jvm.memory.heap.max", allTags, heapUsage.getMax());
-        intervalAggregator.addGauge("jmeter.jvm.memory.non_heap.used", allTags, nonHeapUsage.getUsed());
-        intervalAggregator.addGauge("jmeter.jvm.memory.non_heap.committed", allTags, nonHeapUsage.getCommitted());
     }
 
     /**
