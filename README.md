@@ -64,9 +64,9 @@ The plugin has the following configuration options:
 
 ## Statistics Calculation Modes
 
-- **ddsketch** (default): Uses Datadog's DDSketch algorithm. It computes approximate percentiles with a 1% error guarantee compared to the exact percentile value, while using very little memory. When compared with `aggregate_report`, results may differ more because `aggregate_report` picks the nearest observed value for each percentile, which can cause noticeable jumps when there are few samples.
+- **ddsketch** (default): Uses Datadog's [DDSketch algorithm][9]. It computes approximate percentiles with a 1% error guarantee compared to the exact percentile value, while using very little memory. When compared with `aggregate_report`, results may differ more because `aggregate_report` picks the nearest observed value for each percentile, which can cause noticeable jumps when there are few samples.
 - **aggregate_report**: Matches JMeter's "Aggregate Reports" listener. It stores all response times in memory and calculates percentiles using the "nearest rank" method (nearest exact value from the dataset).
-- **dashboard**: Uses a sliding window and linear interpolation (by default) to calculate percentiles, matching JMeter's HTML Dashboards. This mode may diverge significantly from the others when the limit of the sliding window is reached (default 20,000, but [configurable](https://jmeter.apache.org/usermanual/properties_reference.html#reporting)).
+- **dashboard**: Uses a sliding window and linear interpolation (by default) to calculate percentiles, matching [JMeter's HTML Dashboards][10]. This mode may diverge significantly from the others when the limit of the sliding window is reached (default 20,000, but [configurable][11]).
 
 ## Assertion Failures vs Errors
 
@@ -164,3 +164,6 @@ Your pull request must pass the CI before we can merge it. If you're seeing an e
 [6]: https://jmeter-plugins.org/wiki/PluginsManager/
 [7]: https://docs.datadoghq.com/account_management/api-app-keys/#api-keys
 [8]: https://github.com/DataDog/jmeter-datadog-backend-listener/issues/new
+[9]: https://www.datadoghq.com/blog/engineering/computing-accurate-percentiles-with-ddsketch/
+[10]: https://jmeter.apache.org/usermanual/generating-dashboard.html
+[11]: https://jmeter.apache.org/usermanual/properties_reference.html#reporting
