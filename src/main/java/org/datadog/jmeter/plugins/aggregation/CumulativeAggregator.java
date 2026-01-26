@@ -196,13 +196,13 @@ public class CumulativeAggregator {
         try {
             List<DatadogMetric> out = new ArrayList<>();
 
-            // Emit per-label metrics
+            // Append per-label metrics
             for (Map.Entry<String, LabelStats> entry : labelTagToStats.entrySet()) {
-                emitLabelMetrics(out, entry.getKey(), entry.getValue(), baseTags, metricPrefix);
+                appendLabelMetrics(out, entry.getKey(), entry.getValue(), baseTags, metricPrefix);
             }
 
-            // Emit total metrics (aggregate across all samplers)
-            emitLabelMetrics(out, TOTAL_LABEL_TAG, totalStats, baseTags, metricPrefix);
+            // Append total metrics (aggregate across all samplers)
+            appendLabelMetrics(out, TOTAL_LABEL_TAG, totalStats, baseTags, metricPrefix);
 
             return out;
         } finally {
@@ -210,8 +210,8 @@ public class CumulativeAggregator {
         }
     }
 
-    private void emitLabelMetrics(List<DatadogMetric> out, String labelTag, LabelStats stats,
-                                   List<String> baseTags, String metricPrefix) {
+    private void appendLabelMetrics(List<DatadogMetric> out, String labelTag, LabelStats stats,
+                                    List<String> baseTags, String metricPrefix) {
         List<String> tags = new ArrayList<>(baseTags);
         tags.add(labelTag); // Already a complete sanitized tag pair (e.g., "sample_label:my_request")
 
