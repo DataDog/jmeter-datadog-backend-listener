@@ -122,7 +122,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test
-    public void testApiKeyOnlyRequired() throws DatadogConfigurationException {
+    public void testApiKeyIsTheOnlyRequiredParam() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -132,7 +132,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test(expected = DatadogConfigurationException.class)
-    public void testMetricsBatchSizeInvalid() throws DatadogConfigurationException {
+    public void testMetricsBatchSizeNotInt() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -143,7 +143,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test(expected = DatadogConfigurationException.class)
-    public void testLogsBatchSizeInvalid() throws DatadogConfigurationException {
+    public void testLogsBatchSizeNotInt() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -154,7 +154,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test(expected = DatadogConfigurationException.class)
-    public void testSendResultsAsLogsInvalid() throws DatadogConfigurationException {
+    public void testSendResultsAsLogsNotBoolean() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -165,7 +165,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test(expected = DatadogConfigurationException.class)
-    public void testIncludeSubresultsInvalid() throws DatadogConfigurationException {
+    public void testIncludeSubresultsNotBoolean() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -176,7 +176,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test(expected = PatternSyntaxException.class)
-    public void testExcludeLogsResponseCodeRegexInvalid() throws DatadogConfigurationException {
+    public void testInvalidExcludeLogsResponseCodeRegex() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -187,7 +187,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test
-    public void testExcludeLogsResponseCodeRegexValid() throws DatadogConfigurationException {
+    public void testValidExcludeLogsResponseCodeRegex() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -198,7 +198,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test(expected = PatternSyntaxException.class)
-    public void testSamplersRegexInvalid() throws DatadogConfigurationException {
+    public void testInvalidSamplersRegex() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -209,7 +209,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test
-    public void testSamplersRegexValid() throws DatadogConfigurationException {
+    public void testValidSamplersRegex() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -220,7 +220,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test
-    public void testCustomTagsEmpty() throws DatadogConfigurationException {
+    public void testNoValueProvidedForCustomTags() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -231,7 +231,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test
-    public void testCustomTagsKeyOnly() throws DatadogConfigurationException {
+    public void testOnlyKeyForCustomTags() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
@@ -242,7 +242,7 @@ public class DatadogConfigurationTest {
     }
 
     @Test
-    public void testCustomTagsSpecialChar() throws DatadogConfigurationException {
+    public void testSpecialCharacterForCustomTags() throws DatadogConfigurationException {
         Map<String, String> config = new HashMap<String, String>() {
             {
                 put("apiKey", "123456");
