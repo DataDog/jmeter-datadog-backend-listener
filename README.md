@@ -6,8 +6,8 @@
 
 Datadog Backend Listener for Apache JMeter is a JMeter plugin used to send test results to the Datadog platform. It includes the following features:
 
-- Real time reporting of test metrics (latency, bytes sent and more). See the Metrics section.
-- Real time reporting of test results as Datadog log events.
+- Real-time reporting of test metrics (latency, bytes sent and more). See the [Metrics](#metrics) section.
+- Real-time reporting of test results as Datadog log events.
 - Ability to include sub results.
 
 ## Setup
@@ -33,14 +33,14 @@ No Datadog Agent is necessary.
 3. Launch JMeter (or quit and re-open the application).
 4. Go to `Options > Plugins Manager > Available Plugins`.
 5. Search for "Datadog Backend Listener".
-6. Click the checbox next to the Datadog Backend Listener plugin.
+6. Click the checkbox next to the Datadog Backend Listener plugin.
 7. Click "Apply Changes and Restart JMeter".
 
 ### Configuration
 
 To start reporting metrics to Datadog:
 
-1. Right click on the thread group or the test plan for which you want to send metrics to Datadog.
+1. Right-click on the thread group or the test plan for which you want to send metrics to Datadog.
 2. Go to `Add > Listener > Backend Listener`.
 3. Modify the `Backend Listener Implementation` and select `org.datadog.jmeter.plugins.DatadogBackendClient` from the drop-down.
 4. Set the `apiKey` variable to [your Datadog API key][7].
@@ -51,9 +51,9 @@ The plugin has the following configuration options:
 | Name       | Required | Default value | description|
 |------------|:--------:|---------------|------------|
 |apiKey | true | NA | Your Datadog API key.|
-|datadogUrl | false | https://api.datadoghq.com/api/ | You can configure a different endpoint, for instance https://api.datadoghq.eu/api/ if your datadog instance is in the EU|
-|logIntakeUrl | false | https://http-intake.logs.datadoghq.com/v1/input/ | You can configure a different endpoint, for instance https://http-intake.logs.datadoghq.eu/v1/input/ if your datadog instance is in the EU|
-|metricsMaxBatchSize|false|200|Metrics are submitted every 10 seconds in batches of size `metricsMaxBatchSize`|
+|datadogUrl | false | https://api.datadoghq.com/api/ | You can configure a different endpoint, for instance https://api.datadoghq.eu/api/ if your Datadog instance is in the EU. |
+|logIntakeUrl | false | https://http-intake.logs.datadoghq.com/v1/input/ | You can configure a different endpoint, for instance https://http-intake.logs.datadoghq.eu/v1/input/ if your datadog instance is in the EU. |
+|metricsMaxBatchSize|false|200|Metrics are submitted every 10 seconds in batches of size `metricsMaxBatchSize`. |
 |logsBatchSize|false|500|Logs are submitted in batches of size `logsBatchSize` as soon as this size is reached.|
 |sendResultsAsLogs|false|true|By default, individual test results are reported as log events. Set to `false` to disable log reporting.|
 |includeSubresults|false|false|A subresult is for instance when an individual HTTP request has to follow redirects. By default subresults are ignored.|
@@ -62,17 +62,27 @@ The plugin has the following configuration options:
 |customTags|false|`""`|Comma-separated list of tags to add to every metric.|
 |statisticsCalculationMode|false|`ddsketch`|Algorithm for percentile calculation: `ddsketch` (default), `aggregate_report` (matches JMeter Aggregate Reports), or `dashboard` (matches JMeter HTML Dashboards).|
 
-## Statistics Calculation Modes
+#### Statistics Calculation Modes
 
-- **ddsketch** (default): Uses Datadog's [DDSketch algorithm][9]. It computes approximate percentiles with a 1% error guarantee compared to the exact percentile value, while using very little memory. When compared with `aggregate_report`, results may differ more because `aggregate_report` picks the nearest observed value for each percentile, which can cause noticeable jumps when there are few samples.
+- **ddsketch** (default): Uses Datadog's [DDSketch algorithm][9]. It provides approximate percentiles with a 1% error guarantee (relative to the theoretical value) and has a low memory footprint. Note that when comparing with `aggregate_report`, the difference might be greater because `aggregate_report` uses the "nearest rank" method, which introduces its own divergence due to quantization (especially with sparse values).
 - **aggregate_report**: Matches JMeter's "Aggregate Reports" listener. It stores all response times in memory and calculates percentiles using the "nearest rank" method (nearest exact value from the dataset).
-- **dashboard**: Uses a sliding window and linear interpolation (by default) to calculate percentiles, matching [JMeter's HTML Dashboards][10]. This mode may diverge significantly from the others when the limit of the sliding window is reached (default 20,000, but [configurable][11]).
+- **dashboard**: Uses a sliding window and interpolation (by default) to calculate percentiles, matching [JMeter's HTML Dashboards][10]. This mode may diverge significantly from the others when the limit of the sliding window is reached (default 20,000, but [configurable][11]).
 
-## Assertion Failures vs Errors
+#### Test Run Tagging
+
+The plugin automatically adds a `test_run_id` tag to all metrics, logs, and events (Test Started/Ended) to help you isolate and filter specific test executions in Datadog.
+
+- **Format**: `{timestamp}-{hostname}-{random8chars}`
+  - Example: `2026-01-24T14:30:25Z-myhost-a1b2c3d4`
+  - In distributed mode, the `hostname` prefix becomes the `runner_id` (the JMeter distributed prefix) when present.
+
+You can override this by providing your own `test_run_id` in the `customTags` configuration (e.g., `test_run_id:my-custom-run-id`). Any additional tags you add to `customTags` will also be included alongside the `test_run_id`.
+
+#### Assertion Failures vs Errors
 
 JMeter distinguishes between assertion failures and assertion errors. A failure means the assertion evaluated and did not pass. An error means the assertion could not be evaluated (for example, a null response or a script error). These map to `jmeter.assertions.failed` and `jmeter.assertions.error`.
 
-## Getting Final Results in Datadog Notebooks
+#### Getting Final Results in Datadog Notebooks
 
 To match JMeter's Aggregate Reports in a Datadog notebook, set `statisticsCalculationMode=aggregate_report` and query the `jmeter.final_result.*` metrics. These are emitted once at test end, so they are ideal for a single, authoritative snapshot.
 
@@ -85,18 +95,6 @@ avg:jmeter.final_result.response_time.p95{sample_label:total,test_run_id:YOUR_RU
 avg:jmeter.final_result.responses.error_percent{sample_label:total,test_run_id:YOUR_RUN_ID}
 avg:jmeter.final_result.throughput.rps{sample_label:total,test_run_id:YOUR_RUN_ID}
 ```
-
-**Distributed Mode**: In distributed tests, each runner calculates percentiles independently. Add the `runner_id` tag to filter by a specific runner (e.g., `runner_id:runner-1`).
-
-## Test Run Tagging
-
-The plugin automatically adds a `test_run_id` tag to all metrics, logs, and events (Test Started/Ended) to help you isolate and filter specific test executions in Datadog.
-
-- **Format**: `{prefix}-{ISO-8601 timestamp}-{random8chars}`
-  - Example: `myhost-2026-01-24T14:30:25Z-a1b2c3d4`
-  - By default, `prefix` is the local hostname. In distributed mode, it becomes the `runner_id` (the JMeter distributed runner prefix), when present.
-
-You can override this by providing your own `test_run_id` in the `customTags` configuration (e.g., `test_run_id:my-custom-run-id`). Any additional tags you add to `customTags` will also be included alongside the `test_run_id`.
 
 ## Data Collected
 
@@ -123,9 +121,9 @@ These events appear in the Datadog Event Explorer and can be used to correlate m
 
 ## Troubleshooting
 
-If for whatever reason you are not seeing JMeter metrics in Datadog, check your `jmeter.log` file, which should be in the `/bin` folder of your JMeter installation.
+If you're not seeing JMeter metrics in Datadog, check your `jmeter.log` file, which should be in the `/bin` folder of your JMeter installation.
 
-#### Not Seeing `runner_id`?
+#### Troubleshoot missing `runner_id` tag
 
 This is normal in local mode. The `runner_id` tag is only emitted in **distributed** tests, where JMeter provides a distributed prefix. In local runs, use `runner_host` or `runner_mode:local` for filtering instead.
 
