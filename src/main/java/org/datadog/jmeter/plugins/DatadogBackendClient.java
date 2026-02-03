@@ -212,15 +212,12 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
 
         if (this.cumulativeAggregator != null) {
             List<DatadogMetric> finalMetrics = this.cumulativeAggregator.buildMetrics(
-                CommonUtils.combineTags(this.customTagsWithRunner,
-                    "statistics_mode:" + configuration.getStatisticsCalculationMode().getValue(),
-                    "final_result:true")
+                CommonUtils.combineTags(this.customTagsWithRunner, "final_result:true")
             );
 
             // Add final_result metrics (emitted only at test end, without final_result tag)
             List<DatadogMetric> finalResultMetrics = this.cumulativeAggregator.buildFinalMetrics(
-                CommonUtils.combineTags(this.customTagsWithRunner,
-                    "statistics_mode:" + configuration.getStatisticsCalculationMode().getValue())
+                this.customTagsWithRunner
             );
             finalMetrics.addAll(finalResultMetrics);
 
@@ -269,6 +266,9 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         addTagIfMissing(customTagsWithRunner, "runner_host_ip", JMeterUtils.getLocalHostIP());
         addTagIfMissing(customTagsWithRunner, "runner_host_fqdn", JMeterUtils.getLocalHostFullName());
         addTagIfMissing(customTagsWithRunner, "jmeter_version", JMeterUtils.getJMeterVersion());
+        
+        // Add statistics mode - determined once at setup and used across all metrics
+        customTagsWithRunner.add("statistics_mode:" + configuration.getStatisticsCalculationMode().getValue());
     }
 
     /**
@@ -356,8 +356,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
             CommonUtils.sanitizeTagPair("response_code", sampleResult.getResponseCode()),
             CommonUtils.sanitizeTagPair("sample_label", sampleResult.getSampleLabel()),
             CommonUtils.sanitizeTagPair("thread_group", threadGroup),
-            "result:" + resultStatus,
-            "statistics_mode:" + configuration.getStatisticsCalculationMode().getValue()
+            "result:" + resultStatus
         );
 
         if(sampleResult.isSuccessful()) {
@@ -392,8 +391,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
             List<String> assertionTags = CommonUtils.combineTags(this.customTagsWithRunner,
                 CommonUtils.sanitizeTagPair("assertion_name", assertionName),
                 CommonUtils.sanitizeTagPair("sample_label", sampleResult.getSampleLabel()),
-                CommonUtils.sanitizeTagPair("thread_group", threadGroup),
-                "statistics_mode:" + configuration.getStatisticsCalculationMode().getValue()
+                CommonUtils.sanitizeTagPair("thread_group", threadGroup)
             );
 
             intervalAggregator.incrementCounter("jmeter.assertions.count", assertionTags, 1);
@@ -454,15 +452,12 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
      */
     public void addGlobalMetrics() {
         UserMetric userMetrics = getUserMetrics();
-        List<String> allTags = CommonUtils.combineTags(this.customTagsWithRunner,
-            "statistics_mode:" + configuration.getStatisticsCalculationMode().getValue()
-        );
 
-        intervalAggregator.addGauge("jmeter.active_threads.min", allTags, userMetrics.getMinActiveThreads());
-        intervalAggregator.addGauge("jmeter.active_threads.max", allTags, userMetrics.getMaxActiveThreads());
-        intervalAggregator.addGauge("jmeter.active_threads.avg", allTags, userMetrics.getMeanActiveThreads());
-        intervalAggregator.addGauge("jmeter.threads.finished", allTags, userMetrics.getFinishedThreads());
-        intervalAggregator.addGauge("jmeter.threads.started", allTags, userMetrics.getStartedThreads());
+        intervalAggregator.addGauge("jmeter.active_threads.min", this.customTagsWithRunner, userMetrics.getMinActiveThreads());
+        intervalAggregator.addGauge("jmeter.active_threads.max", this.customTagsWithRunner, userMetrics.getMaxActiveThreads());
+        intervalAggregator.addGauge("jmeter.active_threads.avg", this.customTagsWithRunner, userMetrics.getMeanActiveThreads());
+        intervalAggregator.addGauge("jmeter.threads.finished", this.customTagsWithRunner, userMetrics.getFinishedThreads());
+        intervalAggregator.addGauge("jmeter.threads.started", this.customTagsWithRunner, userMetrics.getStartedThreads());
     }
 
     /**
@@ -476,9 +471,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         // Add cumulative metrics (cumulative, without reset)
         if (this.cumulativeAggregator != null) {
             List<DatadogMetric> cumulativeMetrics = this.cumulativeAggregator.buildMetrics(
-                CommonUtils.combineTags(this.customTagsWithRunner,
-                    "statistics_mode:" + configuration.getStatisticsCalculationMode().getValue(),
-                    "final_result:false")
+                CommonUtils.combineTags(this.customTagsWithRunner, "final_result:false")
             );
             metrics.addAll(cumulativeMetrics);
         }
