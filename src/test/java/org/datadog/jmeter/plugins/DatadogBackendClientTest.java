@@ -266,7 +266,8 @@ public class DatadogBackendClientTest
             "runner_mode:local",
             "runner_host_ip:" + TEST_RUNNER_IP,
             "runner_host_fqdn:" + TEST_RUNNER_FQDN,
-            "jmeter_version:" + TEST_JMETER_VERSION
+            "jmeter_version:" + TEST_JMETER_VERSION,
+            "statistics_mode:ddsketch"
         ), this.logsTags);
     }
 
