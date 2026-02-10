@@ -223,6 +223,8 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
 
             if (log.isInfoEnabled()) {
                 log.info("Sending {} final aggregate metrics to Datadog", finalMetrics.size());
+            }
+            if (log.isDebugEnabled()) {
                 for (DatadogMetric m : finalMetrics) {
                     log.debug("  METRIC: {} = {} [tags: {}]", m.getName(), m.getValue(), String.join(", ", m.getTags()));
                 }
