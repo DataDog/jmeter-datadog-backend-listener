@@ -275,8 +275,8 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
 
     /**
      * Generate a unique test run ID using runner/host prefix and timestamp.
-     * Format: {prefix}-{ISO-8601 timestamp}-{random8chars}
-     * Example: myhost-2026-01-24T14:30:25Z-a1b2c3d4
+     * Format: {ISO-8601 timestamp}-{prefix}-{random8chars}
+     * Example: 2026-01-24T14:30:25Z-myhost-a1b2c3d4
      *
      * @param runnerId The distributed runner ID, if available
      * @param hostname The hostname to use when runner ID is absent
@@ -292,7 +292,7 @@ public class DatadogBackendClient extends AbstractBackendListenerClient implemen
         // Add random suffix for uniqueness
         String randomSuffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         
-        return prefix + "-" + timestamp + "-" + randomSuffix;
+        return timestamp + "-" + prefix + "-" + randomSuffix;
     }
 
     /**
