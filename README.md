@@ -123,7 +123,7 @@ These events appear in the Datadog Event Explorer and can be used to correlate m
 
 If you're not seeing JMeter metrics in Datadog, check your `jmeter.log` file, which should be in the `/bin` folder of your JMeter installation.
 
-#### Troubleshoot missing `runner_id` tag
+### Troubleshoot missing `runner_id` tag
 
 This is normal in local mode. The `runner_id` tag is only emitted in **distributed** tests, where JMeter provides a distributed prefix. In local runs, use `runner_host` or `runner_mode:local` for filtering instead.
 
