@@ -2,7 +2,7 @@
 
 ## 1.0.0
 
-* [Added] Add cumulative metrics support to mirror JMeter's Aggregate Report.
+* [Added] Add cumulative metrics support to mirror JMeter's Aggregate Reports.
 * [Added] Add `statisticsCalculationMode` configuration option to control percentile calculation algorithms (`ddsketch`, `aggregate_report`, `dashboard`).
 * [Added] Add assertion metrics to track success and failure of assertions.
 * [Added] Add Datadog Events for test start and test end.
