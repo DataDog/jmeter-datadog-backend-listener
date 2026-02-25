@@ -52,7 +52,7 @@ The plugin has the following configuration options:
 |------------|:--------:|---------------|------------|
 |apiKey | true | NA | Your Datadog API key.|
 |datadogUrl | false | https://api.datadoghq.com/api/ | You can configure a different endpoint, for instance https://api.datadoghq.eu/api/ if your Datadog instance is in the EU. |
-|logIntakeUrl | false | https://http-intake.logs.datadoghq.com/v1/input/ | You can configure a different endpoint, for instance https://http-intake.logs.datadoghq.eu/v1/input/ if your datadog instance is in the EU. |
+|logIntakeUrl | false | https://http-intake.logs.datadoghq.com/v1/input/ | You can configure a different endpoint, for instance https://http-intake.logs.datadoghq.eu/v1/input/ if your Datadog instance is in the EU. |
 |metricsMaxBatchSize|false|200|Metrics are submitted every 10 seconds in batches of size `metricsMaxBatchSize`. |
 |logsBatchSize|false|500|Logs are submitted in batches of size `logsBatchSize` as soon as this size is reached.|
 |sendResultsAsLogs|false|true|By default, individual test results are reported as log events. Set to `false` to disable log reporting.|
