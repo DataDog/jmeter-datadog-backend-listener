@@ -26,7 +26,7 @@ No Datadog Agent is necessary.
 2. Place the JAR in the `lib/ext` directory within your JMeter installation.
 3. Launch JMeter (or quit and re-open the application).
 
-#### JMeter plugins Manager
+#### JMeter Plugins Manager
 
 1. If not already configured, download the [JMeter Plugins Manager JAR][6].
 2. Once you've completed the download, place the `.jar` in the `lib/ext` directory within your JMeter installation.
