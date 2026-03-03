@@ -27,11 +27,12 @@ public class DatadogConfigurationTest {
     private static final String EXCLUDE_LOGS_RESPONSE_CODE_REGEX = "excludeLogsResponseCodeRegex";
     private static final String SAMPLERS_REGEX = "samplersRegex";
     private static final String CUSTOM_TAGS = "customTags";
+    private static final String STATISTICS_CALCULATION_MODE = "statisticsCalculationMode";
 
     @Test
     public void testArguments(){
         Arguments args = DatadogConfiguration.getPluginArguments();
-        Assert.assertEquals(10, args.getArgumentCount());
+        Assert.assertEquals(11, args.getArgumentCount());
 
         Map<String, String> argumentsMap = args.getArgumentsAsMap();
         Assert.assertTrue(argumentsMap.containsKey(API_URL_PARAM));
@@ -44,6 +45,7 @@ public class DatadogConfigurationTest {
         Assert.assertTrue(argumentsMap.containsKey(EXCLUDE_LOGS_RESPONSE_CODE_REGEX));
         Assert.assertTrue(argumentsMap.containsKey(SAMPLERS_REGEX));
         Assert.assertTrue(argumentsMap.containsKey(CUSTOM_TAGS));
+        Assert.assertTrue(argumentsMap.containsKey(STATISTICS_CALCULATION_MODE));
     }
 
     @Test
@@ -60,6 +62,7 @@ public class DatadogConfigurationTest {
                 put(EXCLUDE_LOGS_RESPONSE_CODE_REGEX, "");
                 put(SAMPLERS_REGEX, "false");
                 put(CUSTOM_TAGS, "key:value");
+                put(STATISTICS_CALCULATION_MODE, "aggregate_report");
             }
         };
 
@@ -74,6 +77,42 @@ public class DatadogConfigurationTest {
         Assert.assertEquals(new ArrayList<>(Arrays.asList("key:value")), datadogConfiguration.getCustomTags());
         Assert.assertTrue(datadogConfiguration.shouldSendResultsAsLogs());
         Assert.assertFalse(datadogConfiguration.shouldIncludeSubResults());
+        Assert.assertEquals(StatisticsMode.AGGREGATE_REPORT, datadogConfiguration.getStatisticsCalculationMode());
+    }
+
+    @Test(expected = DatadogConfigurationException.class)
+    public void testStatsModeInvalid() throws DatadogConfigurationException {
+        Map<String, String> config = new HashMap<String, String>() {
+            {
+                put("apiKey", "123456");
+                put(STATISTICS_CALCULATION_MODE, "bogus");
+            }
+        };
+        DatadogConfiguration.parseConfiguration(new BackendListenerContext(config));
+    }
+
+    @Test
+    public void testStatsModeDdsketch() throws DatadogConfigurationException {
+        Map<String, String> config = new HashMap<String, String>() {
+            {
+                put("apiKey", "123456");
+                put(STATISTICS_CALCULATION_MODE, "ddsketch");
+            }
+        };
+        DatadogConfiguration datadogConfiguration = DatadogConfiguration.parseConfiguration(new BackendListenerContext(config));
+        Assert.assertEquals(StatisticsMode.DDSKETCH, datadogConfiguration.getStatisticsCalculationMode());
+    }
+
+    @Test
+    public void testStatsModeDashboard() throws DatadogConfigurationException {
+        Map<String, String> config = new HashMap<String, String>() {
+            {
+                put("apiKey", "123456");
+                put(STATISTICS_CALCULATION_MODE, "dashboard");
+            }
+        };
+        DatadogConfiguration datadogConfiguration = DatadogConfiguration.parseConfiguration(new BackendListenerContext(config));
+        Assert.assertEquals(StatisticsMode.DASHBOARD, datadogConfiguration.getStatisticsCalculationMode());
     }
 
     @Test(expected = DatadogConfigurationException.class)

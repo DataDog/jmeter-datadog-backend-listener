@@ -5,6 +5,10 @@
 
 package org.datadog.jmeter.plugins.metrics;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
@@ -45,14 +49,14 @@ public class DatadogMetricContextTest {
         String foo2 = new String("foo");
         String bar1 = new String("bar");
         String bar2 = new String("bar");
-        String[] tags1 = new String[]{bar1};
-        String[] tags2 = new String[]{bar2};
+        List<String> tags1 = Arrays.asList(bar1);
+        List<String> tags2 = Arrays.asList(bar2);
 
         assertNotSame(foo1, foo2);
         assertNotSame(tags1, tags2);
-        assertSame(tags1[0], bar1);
-        assertSame(tags2[0], bar2);
-        assertNotSame(tags1[0], tags2[0]);
+        assertSame(tags1.get(0), bar1);
+        assertSame(tags2.get(0), bar2);
+        assertNotSame(tags1.get(0), tags2.get(0));
         DatadogMetricContext ctx1 = new DatadogMetricContext(foo1, tags1);
         DatadogMetricContext ctx2 = new DatadogMetricContext(foo2, tags2);
 
@@ -65,12 +69,12 @@ public class DatadogMetricContextTest {
         String foo1 = new String("foo");
         String foo2 = new String("foo");
         String bar = new String("bar");
-        String[] tags1 = new String[]{bar};
-        String[] tags2 = new String[]{bar};
+        List<String> tags1 = Arrays.asList(bar);
+        List<String> tags2 = Arrays.asList(bar);
 
         assertNotSame(foo1, foo2);
         assertNotSame(tags1, tags2);
-        assertSame(tags1[0], tags2[0]);
+        assertSame(tags1.get(0), tags2.get(0));
 
         DatadogMetricContext ctx1 = new DatadogMetricContext(foo1, tags1);
         DatadogMetricContext ctx2 = new DatadogMetricContext(foo2, tags2);
@@ -83,13 +87,13 @@ public class DatadogMetricContextTest {
     {
         String foo = new String("foo");
         String bar = new String("bar");
-        String[] tags1 = new String[]{bar};
-        String[] tags2 = new String[]{bar};
+        List<String> tags1 = Arrays.asList(bar);
+        List<String> tags2 = Arrays.asList(bar);
 
         assertNotSame(tags1, tags2);
-        assertSame(tags1[0], bar);
-        assertSame(tags2[0], bar);
-        assertSame(tags1[0], tags2[0]);
+        assertSame(tags1.get(0), bar);
+        assertSame(tags2.get(0), bar);
+        assertSame(tags1.get(0), tags2.get(0));
 
         DatadogMetricContext ctx1 = new DatadogMetricContext(foo, tags1);
         DatadogMetricContext ctx2 = new DatadogMetricContext(foo, tags2);
@@ -104,10 +108,10 @@ public class DatadogMetricContextTest {
         String foo2 = new String("foo");
 
         String bar = new String("bar");
-        String[] tags = new String[]{bar};
+        List<String> tags = Arrays.asList(bar);
 
         assertNotSame(foo1, foo2);
-        assertSame(tags[0], bar);
+        assertSame(tags.get(0), bar);
 
         DatadogMetricContext ctx1 = new DatadogMetricContext(foo1, tags);
         DatadogMetricContext ctx2 = new DatadogMetricContext(foo2, tags);
@@ -121,9 +125,9 @@ public class DatadogMetricContextTest {
         String foo = new String("foo");
 
         String bar = new String("bar");
-        String[] tags = new String[]{bar};
+        List<String> tags = Arrays.asList(bar);
 
-        assertSame(tags[0], bar);
+        assertSame(tags.get(0), bar);
 
         DatadogMetricContext ctx1 = new DatadogMetricContext(foo, tags);
         DatadogMetricContext ctx2 = new DatadogMetricContext(foo, tags);
@@ -134,7 +138,7 @@ public class DatadogMetricContextTest {
     @Test
     public void differentNamesMakesDifferentObjects()
     {
-        String[] tags = new String[]{};
+        List<String> tags = Arrays.asList();
         DatadogMetricContext ctx1 = new DatadogMetricContext("foo1", tags);
         DatadogMetricContext ctx2 = new DatadogMetricContext("foo2", tags);
 
@@ -144,8 +148,8 @@ public class DatadogMetricContextTest {
     @Test
     public void differentTagsMakesDifferentObjects()
     {
-        String[] tags1 = new String[]{"bar1"};
-        String[] tags2 = new String[]{"bar2"};
+        List<String> tags1 = Arrays.asList("bar1");
+        List<String> tags2 = Arrays.asList("bar2");
         DatadogMetricContext ctx1 = new DatadogMetricContext("foo", tags1);
         DatadogMetricContext ctx2 = new DatadogMetricContext("foo", tags2);
 

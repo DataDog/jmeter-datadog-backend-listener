@@ -6,6 +6,7 @@
 package org.datadog.jmeter.plugins;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.apache.jmeter.config.Arguments;
@@ -71,6 +72,10 @@ public class DatadogConfiguration {
      */
     private List<String> customTags;
 
+    /**
+     * User configurable: determines which algorithm to use for computing aggregate statistics.
+     */
+    private StatisticsMode statisticsCalculationMode;
 
     /* The names of configuration options that are shown in JMeter UI */
     private static final String API_URL_PARAM = "datadogUrl";
@@ -82,7 +87,9 @@ public class DatadogConfiguration {
     private static final String INCLUDE_SUB_RESULTS = "includeSubresults";
     private static final String EXCLUDE_LOGS_RESPONSE_CODE_REGEX = "excludeLogsResponseCodeRegex";
     private static final String SAMPLERS_REGEX = "samplersRegex";
-    private static final String CUSTOM_TAGS ="customTags";
+    private static final String CUSTOM_TAGS = "customTags";
+    private static final String STATISTICS_CALCULATION_MODE = "statisticsCalculationMode";
+    private static final StatisticsMode DEFAULT_STATISTICS_CALCULATION_MODE = StatisticsMode.DDSKETCH;
 
     /* The default values for all configuration options */
     private static final String DEFAULT_API_URL = "https://api.datadoghq.com/api/";
@@ -109,6 +116,7 @@ public class DatadogConfiguration {
         arguments.addArgument(EXCLUDE_LOGS_RESPONSE_CODE_REGEX, DEFAULT_EXCLUDE_LOGS_RESPONSE_CODE_REGEX);
         arguments.addArgument(SAMPLERS_REGEX, DEFAULT_SAMPLERS_REGEX);
         arguments.addArgument(CUSTOM_TAGS, DEFAULT_CUSTOM_TAGS);
+        arguments.addArgument(STATISTICS_CALCULATION_MODE, DEFAULT_STATISTICS_CALCULATION_MODE.getValue());
         return arguments;
     }
 
@@ -167,7 +175,18 @@ public class DatadogConfiguration {
 
         configuration.customTags = customTags;
 
+        configuration.statisticsCalculationMode = parseStatisticsCalculationMode(context);
+
         return configuration;
+    }
+
+    private static StatisticsMode parseStatisticsCalculationMode(BackendListenerContext context) throws DatadogConfigurationException {
+        String modeStr = context.getParameter(STATISTICS_CALCULATION_MODE, DEFAULT_STATISTICS_CALCULATION_MODE.getValue());
+        try {
+            return StatisticsMode.fromStringValue(modeStr);
+        } catch (IllegalArgumentException e) {
+            throw new DatadogConfigurationException("Invalid '" + STATISTICS_CALCULATION_MODE + "': " + e.getMessage());
+        }
     }
 
     public String getApiKey() {
@@ -207,6 +226,10 @@ public class DatadogConfiguration {
     }
 
     public List<String> getCustomTags(){
-        return customTags;
+        return Collections.unmodifiableList(customTags);
+    }
+
+    public StatisticsMode getStatisticsCalculationMode() {
+        return statisticsCalculationMode;
     }
 }
