@@ -10,7 +10,7 @@ variables:
 
 deploy_to_maven_central:
   stage: deploy
-  tags: [ "runner:docker" ]
+  tags: [ "docker-in-docker:amd64" ]
   image: $BUILDER_IMAGE_REPO
 
   only:
@@ -56,7 +56,7 @@ create_key:
   when: manual
 
   tags:
-    - "runner:docker"
+    - "docker-in-docker:amd64"
 
   image: $REGISTRY/ci/agent-key-management-tools/gpg:1
   variables:
@@ -77,4 +77,4 @@ rebuild_maven_image:
   script:
     - docker build --label target=build --tag $BUILDER_IMAGE_REPO .     # Build the Dockerfile from this directory
     - docker push $BUILDER_IMAGE_REPO
-  tags: [ "runner:docker" ]
+  tags: [ "docker-in-docker:amd64" ]
