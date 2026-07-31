@@ -48,31 +48,6 @@ deploy_to_maven_central:
 
     - set -x
 
-
-verify_gpg_image:
-  stage: build
-  tags: [ "docker-in-docker:amd64" ]
-  image: $GPG_IMAGE
-  rules:
-    - if: '$CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
-      when: manual
-  script:
-    - test -x /create.sh
-    - gpg --version
-    - aws --version
-
-verify_builder_image:
-  stage: build
-  tags: [ "docker-in-docker:amd64" ]
-  image: $BUILDER_IMAGE_REPO
-  rules:
-    - if: '$CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
-      when: manual
-  script:
-    - mvn --version
-    - gpg --version
-    - aws --version
-
 # This job generates the GPG key
 # NOTE: This is included for once gpg keys expire, this has not been run before
 create_key:
