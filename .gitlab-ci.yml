@@ -4,9 +4,9 @@ stages:
   - rotate_gpg_keys
 
 variables:
-  REGISTRY: 486234852809.dkr.ecr.us-east-1.amazonaws.com
-  BUILDER_IMAGE: $REGISTRY/ci/jmeter-datadog-backend-listener:latest
-  BUILDER_IMAGE_REPO: registry.ddbuild.io/$BUILDER_IMAGE
+  REGISTRY: registry.ddbuild.io
+  BUILDER_IMAGE_REPO: $REGISTRY/486234852809.dkr.ecr.us-east-1.amazonaws.com/ci/jmeter-datadog-backend-listener:latest
+  GPG_IMAGE: $REGISTRY/ci/agent-key-management-tools/gpg:1@sha256:a6033e3c52feb3198285732be55068afd87583385f94aafe927c5d1f6c4ddb37
 
 deploy_to_maven_central:
   stage: deploy
@@ -48,7 +48,6 @@ deploy_to_maven_central:
 
     - set -x
 
-
 # This job generates the GPG key
 # NOTE: This is included for once gpg keys expire, this has not been run before
 create_key:
@@ -58,7 +57,7 @@ create_key:
   tags:
     - "docker-in-docker:amd64"
 
-  image: $REGISTRY/ci/agent-key-management-tools/gpg:1
+  image: $GPG_IMAGE
   variables:
     PROJECT_NAME: "jmeter-datadog-backend-listener"
     EXPORT_TO_KEYSERVER: "true"
