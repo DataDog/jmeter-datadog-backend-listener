@@ -37,3 +37,6 @@ run-build.sh
 .classpath
 .factorypath
 .project
+
+# macOS
+.DS_Store

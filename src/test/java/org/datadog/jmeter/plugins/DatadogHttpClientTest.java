@@ -50,6 +50,7 @@ public class DatadogHttpClientTest {
 
         verify(conn).setConnectTimeout(TIMEOUT_MS);
         verify(conn).setReadTimeout(TIMEOUT_MS);
+        verify(conn).disconnect();
     }
 
     @Test
@@ -64,6 +65,7 @@ public class DatadogHttpClientTest {
         verify(conn).setReadTimeout(TIMEOUT_MS);
         verify(conn).setRequestProperty("DD-API-KEY", "key");
         verify(conn).setRequestProperty("User-Agent", "Datadog/jmeter-plugin");
+        verify(conn).disconnect();
     }
 
     @Test
@@ -75,5 +77,6 @@ public class DatadogHttpClientTest {
 
         verify(conn).setConnectTimeout(TIMEOUT_MS);
         verify(conn).setReadTimeout(TIMEOUT_MS);
+        verify(conn).disconnect();
     }
 }
