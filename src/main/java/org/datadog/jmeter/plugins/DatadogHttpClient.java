@@ -141,15 +141,11 @@ public class DatadogHttpClient {
         logsArray.addAll(payload);
 
         try {
-            String result = postJson(buildLogsUrl(this.logIntakeUrl, tags), logsArray.toString(),
+            postJson(buildLogsUrl(this.logIntakeUrl, tags), logsArray.toString(),
                 "DD-API-KEY", this.apiKey, "User-Agent", "Datadog/jmeter-plugin");
-            if ("{}".equals(result)) {
-                logger.info(String.format("Sent '%s' logs to Datadog", payload.size()));
-            } else {
-                logger.error(String.format("Unable to send '%s' logs to Datadog", payload.size()));
-            }
+            logger.info(String.format("Sent '%s' logs to Datadog", payload.size()));
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(String.format("Unable to send '%s' logs to Datadog: %s", payload.size(), e.getMessage()));
         }
     }
 
@@ -220,7 +216,12 @@ public class DatadogHttpClient {
                 wr.write(body);
             }
 
-            return readResponse(conn);
+            int responseCode = conn.getResponseCode();
+            String result = readResponse(conn);
+            if (responseCode < 200 || responseCode >= 300) {
+                throw new IOException("HTTP " + responseCode + ": " + result);
+            }
+            return result;
         } finally {
             if (conn != null) {
                 conn.disconnect();
