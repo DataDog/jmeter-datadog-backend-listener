@@ -174,11 +174,12 @@ public class DatadogHttpClient {
                 wr.write(logsArray.toString());
             }
 
+            int responseCode = conn.getResponseCode();
             String result = readResponse(conn);
-            if ("{}".equals(result)) {
+            if (responseCode >= 200 && responseCode < 300) {
                 logger.info(String.format("Sent '%s' logs to Datadog", payload.size()));
             } else {
-                logger.error(String.format("Unable to send '%s' logs to Datadog", payload.size()));
+                logger.error(String.format("Unable to send '%s' logs to Datadog (HTTP %d): %s", payload.size(), responseCode, result));
             }
         } catch (Exception e) {
             e.printStackTrace();
