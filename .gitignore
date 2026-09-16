@@ -25,6 +25,9 @@ hs_err_pid*
 # Target classes
 target/
 
+# Local build helper
+run-build.sh
+
 # Editors
 .idea/
 

@@ -116,22 +116,8 @@ public class DatadogHttpClient {
         JSONObject payload = new JSONObject();
         payload.put("series", series);
 
-        String urlParameters = "?api_key=" + this.apiKey;
-        HttpURLConnection conn = null;
         try {
-            URL url = new URL(this.apiUrl + METRIC + urlParameters);
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setUseCaches(false);
-            conn.setDoInput(true);
-            conn.setDoOutput(true);
-
-            try (OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream(), StandardCharsets.UTF_8)) {
-                logger.debug("Writing to OutputStreamWriter...");
-                wr.write(payload.toString());
-            }
-
-            String result = readResponse(conn);
+            String result = postJson(this.apiUrl + METRIC + "?api_key=" + this.apiKey, payload.toString());
             JSONObject json = (JSONObject) new JSONParser(JSONParser.MODE_PERMISSIVE).parse(result);
             if ("ok".equals(json.getAsString("status"))) {
                 logger.info(String.format("'%s' metrics were sent to Datadog", datadogMetrics.size()));
@@ -142,10 +128,6 @@ public class DatadogHttpClient {
             }
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-            }
         }
     }
 
@@ -158,23 +140,9 @@ public class DatadogHttpClient {
         JSONArray logsArray = new JSONArray();
         logsArray.addAll(payload);
 
-        HttpURLConnection conn = null;
         try {
-            URL url = new URL(buildLogsUrl(this.logIntakeUrl, tags));
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("DD-API-KEY", this.apiKey);
-            conn.setRequestProperty("User-Agent", "Datadog/jmeter-plugin");
-            conn.setUseCaches(false);
-            conn.setDoInput(true);
-            conn.setDoOutput(true);
-
-            try (OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream(), StandardCharsets.UTF_8)) {
-                wr.write(logsArray.toString());
-            }
-
-            String result = readResponse(conn);
+            String result = postJson(buildLogsUrl(this.logIntakeUrl, tags), logsArray.toString(),
+                "DD-API-KEY", this.apiKey, "User-Agent", "Datadog/jmeter-plugin");
             if ("{}".equals(result)) {
                 logger.info(String.format("Sent '%s' logs to Datadog", payload.size()));
             } else {
@@ -182,10 +150,6 @@ public class DatadogHttpClient {
             }
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-            }
         }
     }
 
@@ -223,24 +187,8 @@ public class DatadogHttpClient {
             payload.put("tags", tagsArray);
         }
 
-        String urlParameters = "?api_key=" + this.apiKey;
-        HttpURLConnection conn = null;
         try {
-            URL url = new URL(this.apiUrl + EVENTS + urlParameters);
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setConnectTimeout(timeoutMS);
-            conn.setReadTimeout(timeoutMS);
-            conn.setUseCaches(false);
-            conn.setDoInput(true);
-            conn.setDoOutput(true);
-
-            try (OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream(), StandardCharsets.UTF_8)) {
-                wr.write(payload.toString());
-            }
-
-            String result = readResponse(conn);
+            String result = postJson(this.apiUrl + EVENTS + "?api_key=" + this.apiKey, payload.toString());
             JSONObject json = (JSONObject) new JSONParser(JSONParser.MODE_PERMISSIVE).parse(result);
             if ("ok".equals(json.getAsString("status"))) {
                 logger.info("Event '" + title + "' sent to Datadog");
@@ -249,13 +197,37 @@ public class DatadogHttpClient {
             }
         } catch (Exception e) {
             logger.error("Failed to submit event to Datadog: " + e.getMessage());
+        }
+    }
+
+    private String postJson(String urlString, String body, String... headers) throws IOException {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(urlString);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            for (int i = 0; i + 1 < headers.length; i += 2) {
+                conn.setRequestProperty(headers[i], headers[i + 1]);
+            }
+            conn.setConnectTimeout(timeoutMS);
+            conn.setReadTimeout(timeoutMS);
+            conn.setUseCaches(false);
+            conn.setDoInput(true);
+            conn.setDoOutput(true);
+
+            try (OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream(), StandardCharsets.UTF_8)) {
+                wr.write(body);
+            }
+
+            return readResponse(conn);
         } finally {
             if (conn != null) {
                 conn.disconnect();
             }
         }
     }
-    
+
     private String readResponse(HttpURLConnection conn) throws IOException {
         InputStream inputStream = conn.getErrorStream() != null ? conn.getErrorStream() : conn.getInputStream();
         StringBuilder result = new StringBuilder();
