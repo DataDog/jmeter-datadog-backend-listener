@@ -25,6 +25,9 @@ hs_err_pid*
 # Target classes
 target/
 
+# Local build helper
+run-build.sh
+
 # Editors
 .idea/
 
@@ -34,3 +37,6 @@ target/
 .classpath
 .factorypath
 .project
+
+# macOS
+.DS_Store
