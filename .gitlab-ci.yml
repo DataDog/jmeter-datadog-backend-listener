@@ -71,9 +71,14 @@ create_key:
 # This job makes a new Docker image of maven used for `deploy_to_maven_central` and sends it to $BUILDER_IMAGE_REPO
 rebuild_maven_image:
   stage: build
-  image: $REGISTRY/docker:18.03.1
+  image: $REGISTRY/docker:24.0.4-gbi-focal
   when: manual
+  tags: [ "docker-in-docker:amd64" ]
+  id_tokens:
+    DDSIGN_ID_TOKEN:
+      aud: image-integrity
   script:
     - docker build --label target=build --tag $BUILDER_IMAGE_REPO .     # Build the Dockerfile from this directory
     - docker push $BUILDER_IMAGE_REPO
-  tags: [ "docker-in-docker:amd64" ]
+    - DIGEST=$(crane digest $BUILDER_IMAGE_REPO)
+    - ddsign sign $BUILDER_IMAGE_REPO@$DIGEST
