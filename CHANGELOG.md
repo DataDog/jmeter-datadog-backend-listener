@@ -1,5 +1,10 @@
 # CHANGELOG - JMeter
 
+## 1.0.1
+
+* [Fixed] Prevent the backend-listener thread from hanging indefinitely when a Datadog intake endpoint accepts the TCP connection but never responds: all metrics, logs, and events requests now use connect and read timeouts (60s).
+* [Fixed] Logs intake success is now determined by HTTP status code (any `2xx`) instead of requiring an exact `{}` response body.
+
 ## 1.0.0
 
 * [Added] Add cumulative metrics support to mirror JMeter's Aggregate Reports.
